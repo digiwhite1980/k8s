@@ -1,0 +1,57 @@
+module "efs_generic" {
+  source                     = "../../terraform_modules/efs"
+
+  project                    = "${module.site.project}"
+  environment                = "${module.site.environment}"
+}
+
+module "efs_target_generic" {
+  source              = "../../terraform_modules/efs_target"
+
+  mount_count         = 2
+  file_system_id      = "${module.efs_generic.id}"
+  
+  subnet_ids          = "${module.subnet_public.id}"
+  security_groups     = [ "${module.sg_ingress_internal.id}" ,
+                          "${module.sg_egress.id}" ]
+}
+
+output "efs_target_generic" {
+  value = "${module.efs_target_generic.id}"
+}
+
+module "route53_record_efs" {
+  source              = "../../terraform_modules/route53_record"
+
+  type                = "CNAME"
+  zone_id             = "${module.route53_zone.id}"
+  name                = "efs.${module.site.environment}.${module.site.domain_name}"
+  records             = [ "${module.efs_target_generic.dns_name}" ]
+}
+
+# ####################################################################
+
+data "template_file" "k8s_efs" {
+  template             = "${file("../../deploy/templates/08_efs.tpl")}"
+
+  vars {
+    filesystem_id      = "${module.efs_generic.id}"
+    region             = "${var.aws_region}"
+    ##################################################################
+    # We cannot use a generic DNS name because efs-provisioner 
+    # constructs the url to mount
+    # server             = "${module.route53_record_efs.fqdn}"
+    ##################################################################
+    server             = "${module.efs_generic.id}.efs.${module.site.region}.amazonaws.com"
+    domain             = "${module.site.environment}.${var.domainname}"
+  }
+}
+
+resource "null_resource" "k8s_services_efs" {
+  # Any change to UUID (every apply) triggers re-provisioning
+  triggers {
+    #filename = "test-${uuid()}"
+    elb_controller_dns_name = "${module.elb_kubeapi_internal.dns_name}"
+  }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/08_efs.yaml <<EOL\n${data.template_file.k8s_efs.rendered}\nEOL\n" }
+}
