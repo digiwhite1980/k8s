@@ -119,7 +119,8 @@ write_files:
         -v /etc/cni/:/etc/cni/ \
         -v /opt/cni/:/opt/cni/ \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kubelet \
+          /hyperkube kubelet \
+            --api-servers=${kubeapi_lb_endpoint} \
             --allow-privileged \
             --cloud-provider=aws \
             --cluster-dns=${cluster_dns} \
@@ -132,7 +133,7 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubelet.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubelet-key.pem \
-            --v=4
+            --v=3
       [Install]
       WantedBy=multi-user.target
 
@@ -153,7 +154,7 @@ write_files:
         --volume=/etc/kubernetes:/etc/kubernetes \
         --privileged \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-proxy \
+          /hyperkube proxy \
           --logtostderr=true \
           --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
           --proxy-mode=iptables \

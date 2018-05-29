@@ -112,7 +112,7 @@ variable "kubernetes" {
     kubeapi_ssl_valid = "12"
     kubelet_ssl_valid = "12" 
     name              = "kube"
-    k8s               = "v1.9.7"
+    k8s               = "v1.5.7"
     cni_plugins       = "v0.7.1"
     proxy             = "0.3"
     etcd              = "3.2.2"
@@ -124,7 +124,7 @@ variable "kubernetes" {
     kubednsmasq       = "1.4"
     exechealthz       = "1.2"
     #########################################
-    dashboard         = "v1.8.3"
+    dashboard         = "v1.6.1"
     state-metrics     = "v1.3.1"
     addon-resizer     = "1.7"
 

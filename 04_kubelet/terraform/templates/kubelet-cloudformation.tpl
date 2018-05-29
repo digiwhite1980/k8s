@@ -22,6 +22,11 @@
           "Key": "Environment",
           "Value": "${environment}",
           "PropagateAtLaunch": "true"
+        },
+        {
+          "Key": "kubeVersion",
+          "Value": "${kubernetes_version}",
+          "PropagateAtLaunch": "true"
         }]
       },
       "UpdatePolicy": {

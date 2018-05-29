@@ -133,6 +133,7 @@ data "template_file" "kubelet_cloudformation" {
 
   vars {
     cluster_name        = "${var.kubernetes["name"]}-${module.site.environment}"
+    kubernetes_version  = "${var.kubernetes["k8s"]}"
     environment         = "${module.site.environment}"
     resource_name       = "${var.kubernetes["name"]}${module.site.environment}kubelet"
     subnet_ids          = "${join(",", module.subnet_public.id)}"
@@ -157,6 +158,7 @@ data "template_file" "instance-kubelet" {
 
   vars {
     kubernetes_version    = "${var.kubernetes["k8s"]}"
+    kubeapi_lb_endpoint   = "https://${module.route53_record_kubeapi.fqdn}"
 
     service_ip            = "${var.kubernetes["service_ip"]}"
     service_ip_range      = "${var.kubernetes["service_ip_range"]}"

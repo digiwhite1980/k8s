@@ -29,6 +29,31 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  - path: /usr/local/bin/cni-plugins.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      [[ ! -d /opt/cni/bin ]] && mkdir -p /opt/cni/bin
+      cd /opt/cni/bin
+      if [ -f loopback ]; then
+        echo "CNI plugins already installed."
+      else
+        curl -s -L https://github.com/containernetworking/plugins/releases/download/${cni_plugin_version}/cni-plugins-amd64-${cni_plugin_version}.tgz | tar xzf -
+      fi
+
+  - path: /etc/systemd/system/cni-plugins.service
+    content: |
+      [Unit]
+      Description=CNI plugin download script
+      Before=docker.service
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/cni-plugins.sh
+      RemainAfterExit=true
+      StandardOutput=journal
+      [Install]
+      WantedBy=multi-user.target
+
   - path: /etc/systemd/system/docker-tcp.socket
     content: |
       [Unit]
@@ -63,7 +88,7 @@ write_files:
           --privileged \
           --volume=/etc/kubernetes/:/etc/kubernetes/ \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-            kube-proxy \
+            /hyperkube proxy \
             --logtostderr=true \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
             --proxy-mode=iptables \
@@ -90,10 +115,9 @@ write_files:
         --volume=/etc/kubernetes/:/etc/kubernetes/ \
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-apiserver \
+          /hyperkube apiserver \
           --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota \
           --allow-privileged=true \
-          --audit-log-format=json \
           --bind-address=0.0.0.0 \
           --client-ca-file=/etc/kubernetes/ssl/ca.pem \
           --cloud-provider=aws \
@@ -151,21 +175,21 @@ write_files:
         -v /etc/cni/:/etc/cni/ \
         -v /opt/cni/:/opt/cni/ \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kubelet \
+          /hyperkube kubelet \
+            --api-servers=${kubeapi_lb_endpoint} \
             --allow-privileged \
             --cloud-provider=aws \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-            --register-with-taints=node-role.kubernetes.io/master=true:NoSchedule \
             --network-plugin=cni \
             --node-labels="instance-group=${instance_group},instance-type=node" \
             --pod-manifest-path=/etc/kubernetes/manifests \
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubeapi.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-            --v=4
+            --v=3
       [Install]
       WantedBy=multi-user.target
 
@@ -183,7 +207,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-controller-manager \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-controller-manager \
+          /hyperkube controller-manager \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
             --leader-elect=true \
             --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
@@ -209,7 +233,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-scheduler \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-        kube-scheduler \
+        /hyperkube scheduler \
           --leader-elect=true \
           --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
           --v=3

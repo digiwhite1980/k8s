@@ -90,6 +90,8 @@ data "template_file" "instance-kubeapi" {
     flannel_ip_range      = "${var.kubernetes["flannel_ip_range"]}"
     cluster_dns           = "${var.kubernetes["cluster_dns"]}"
     cluster_domain        = "${var.kubernetes["cluster_domain"]}"
+    
+    cni_plugin_version    = "${var.kubernetes["cni_plugins"]}"
 
     instance_group        = "${module.site.environment}.${module.site.domain_name}"
     docker_port           = "${var.ports["docker"]}"
@@ -106,6 +108,8 @@ data "template_file" "instance-kubeapi" {
 
     ssl_etcd_key          = "${module.ssl_etcd_key.private_key_pem}"
     ssl_etcd_crt          = "${module.ssl_etcd_crt.cert_pem}"
+
+    kubeapi_lb_endpoint   = "https://kubeapi.${module.site.environment}.${module.site.domain_name}"
 
     PRIVATE_IPV4          = "$${PRIVATE_IPV4}"
   }
@@ -157,6 +161,7 @@ module "instance_kubeapi" {
   tags = {
     kubeapi                   = true
     KubernetesCluster         = "${var.kubernetes["name"]}-${module.site.environment}"
+    kubeVersion               = "${var.kubernetes["k8s"]}"
   }
 
   instance_name               = "${var.project["kubeapi"]}"

@@ -152,9 +152,9 @@ resource "null_resource" "k8s_cni" {
   # We also depend on kubectl (we expect it to be avialable within your path)
   ################################################################################
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_weavenet.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_secrets.yaml" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/01_coreDNS.yaml" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/02_dashboard.yaml" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_secrets.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/01_coreDNS.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/02_dashboard.yaml; true" }
 
   triggers = {
     provisioner = "${null_resource.k8s_services.id}"
