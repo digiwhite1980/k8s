@@ -1,5 +1,7 @@
 # #################################################################################
-# # We demand terraform to be executed with the -var env={value} flag 
+# We demand terraform to be executed with the -var env={value} flag 
+#
+# terraform plan -var env={environment} -var cidr_prefix={x.x}
 # #################################################################################
 
 data "aws_caller_identity" "main" {}
@@ -35,7 +37,7 @@ module "site" {
   source          = "../../terraform_modules/site"
 
   region          = "${data.aws_region.site_region.name}"
-  vpc_cidr        = "${var.vpc_cidr["${var.env}"]}"
+  vpc_cidr        = "${local.cidr_vpc["region"]}"
 
   project         = "${var.project["main"]}"
   environment     = "${var.env}"
@@ -63,7 +65,7 @@ module "subnet_public" {
   project           = "${module.site.project}"
   environment       = "${module.site.environment}"
 
-  cidr_block        = [ "${var.subnet_public}" ]
+  cidr_block        = [ "${local.cidr_public}" ]
   
   availability_zone = [ "${data.aws_availability_zones.site_avz.names}" ]
 
@@ -87,7 +89,7 @@ module "sg_ingress_internal" {
       from_port     = 0
       to_port       = 0
       protocol      = "-1"
-      cidr_blocks   = [ "${var.vpc_cidr["${var.env}"]}" ]      
+      cidr_blocks   = [ "${local.cidr_vpc["region"]}" ]      
     }
   ]
 }
@@ -103,13 +105,13 @@ module "sg_ingress_management" {
       from_port     = "${var.ports["ssh"]}"
       to_port       = "${var.ports["ssh"]}"
       protocol      = "TCP"
-      cidr_blocks   = [ "0.0.0.0/0" ]
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
     },
     {
       from_port     = "${var.ports["https"]}"
       to_port       = "${var.ports["https"]}"
       protocol      = "TCP"
-      cidr_blocks   = [ "0.0.0.0/0" ]
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
     }
   ]
 }
@@ -122,7 +124,7 @@ module "sg_egress" {
 
   egress            = [
     {
-      cidr_blocks   = [ "0.0.0.0/0" ]
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
       from_port     = 0
       to_port       = 0
       protocol      = "-1"
@@ -143,14 +145,14 @@ module "sg_gress_kubernetes" {
       from_port       = 0
       to_port         = 0
       protocol        = "-1"
-      cidr_blocks     = [ "${var.vpc_cidr["${var.env}"]}" ]
+      cidr_blocks     = [ "${local.cidr_vpc["region"]}" ]
       self            = true
     },
     {
       from_port       = "${var.ports["ssh"]}"
       to_port         = "${var.ports["ssh"]}"
       protocol        = "TCP"
-      cidr_blocks     = [ "0.0.0.0/0" ]
+      cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
       self            = true
     }
   ]
@@ -160,13 +162,14 @@ module "sg_gress_kubernetes" {
       from_port       = 0
       to_port         = 0
       protocol        = "-1"
-      cidr_blocks     = [ "0.0.0.0/0" ]
+      cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
       self            = true      
     }
   ]
 
   tags {
     KubernetesCluster     = "${var.kubernetes["name"]}-${module.site.environment}"
+    KubernetesVersion     = "${var.kubernetes["k8s"]}"
   }
 }
 

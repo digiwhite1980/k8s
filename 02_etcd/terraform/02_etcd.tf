@@ -70,13 +70,13 @@ module "sg_ingress_etcd" {
       from_port     = "${var.ports["etcd_client"]}"
       to_port       = "${var.ports["etcd_client"]}"
       protocol      = "TCP"
-      cidr_blocks   = [ "${var.vpc_cidr["${var.env}"]}" ]
+      cidr_blocks   = [ "${local.cidr_vpc["region"]}" ]
     },
     {
       from_port     = "${var.ports["etcd_peer"]}"
       to_port       = "${var.ports["etcd_peer"]}"
       protocol      = "TCP"
-      cidr_blocks   = [ "${var.vpc_cidr["${var.env}"]}" ]
+      cidr_blocks   = [ "${local.cidr_vpc["region"]}" ]
     }    
   ]
 }
@@ -121,6 +121,7 @@ module "instance_etcd" {
 
   tags = {
     etcd                      = "${module.site.environment}"
+    etcdVersion               = "${var.kubernetes["etcd"]}"
   }
 
   instance_name               = "${var.project["etcd"]}"
