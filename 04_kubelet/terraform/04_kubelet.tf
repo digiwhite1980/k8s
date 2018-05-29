@@ -23,7 +23,7 @@ module "ssl_kubelet_csr" {
                           "kubernetes.default.svc",
                           "kubernetes.default.svc.cluster.local",
                           "127.0.0.1",
-                          "${var.kubernetes["service_ip"]}",
+                          "${lookup(local.kubernetes_public, "api.0")}",
                           "*.${module.site.region}.compute.internal",                          
                           "*.compute.internal",
                           "*.compute.amazonaws.com",
@@ -38,7 +38,7 @@ module "ssl_kubelet_csr" {
                         ]
   ip_addresses          = [
                           "127.0.0.1",
-                          "${var.kubernetes["service_ip"]}"
+                          "${lookup(local.kubernetes_public, "api.0")}"
   ]
 }
 
@@ -160,9 +160,10 @@ data "template_file" "instance-kubelet" {
     kubernetes_version    = "${var.kubernetes["k8s"]}"
     kubeapi_lb_endpoint   = "https://${module.route53_record_kubeapi.fqdn}"
 
-    service_ip            = "${var.kubernetes["service_ip"]}"
-    service_ip_range      = "${var.kubernetes["service_ip_range"]}"
-    cluster_dns           = "${var.kubernetes["cluster_dns"]}"
+    service_ip            = "${lookup(local.kubernetes_public, "api.0")}"
+    service_ip_range      = "${lookup(local.cidr_public, "avz.0")}"
+    cluster_dns           = "${lookup(local.kubernetes_public, "dns.0")}"
+
     cluster_domain        = "${module.site.domain_name}"
 
     docker_port           = "${var.ports["docker"]}"

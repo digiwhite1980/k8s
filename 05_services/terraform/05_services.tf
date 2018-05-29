@@ -57,7 +57,7 @@ data "template_file" "k8s_kubedns" {
   template             = "${file("../../deploy/templates/01_kubeDNS.tpl")}"
 
   vars {
-    cluster_ip_dns        = "${var.kubernetes["cluster_dns"]}"
+    cluster_ip_dns        = "${lookup(local.kubernetes_public, "dns.0")}"
     kubedns_version       = "${var.kubernetes["kubedns"]}"
     kubedns_domain        = "${var.kubernetes["cluster_domain"]}"
     kubednsmaq_version    = "${var.kubernetes["kubednsmasq"]}"
@@ -69,7 +69,7 @@ data "template_file" "k8s_coredns" {
   template             = "${file("../../deploy/templates/01_coreDNS.tpl")}"
 
   vars {
-    cluster_ip_dns        = "${var.kubernetes["cluster_dns"]}"
+    cluster_ip_dns        = "${lookup(local.kubernetes_public, "dns.0")}"
     coredns_version       = "${var.kubernetes["coredns"]}"
     kubedns_domain        = "${var.kubernetes["cluster_domain"]}"
   }

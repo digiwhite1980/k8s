@@ -5,8 +5,59 @@ variable "env" {
   default            = ""
 }
 
+variable "cidr_vpc_prefix" {
+  default            = "10.0"
+}
+
+variable "cidr_vpc_postfix" {
+  default            = "0.0/16"
+}
+
 variable "domainname" {
   default            = "example.internal"
+}
+
+locals  {
+  cidr_vpc = {
+    region    = "${var.cidr_vpc_prefix}.${var.cidr_vpc_postfix}"
+    all       = "0.0.0.0/0"
+  },
+
+  cidr_public = {
+    avz.0  = "${var.cidr_vpc_prefix}.110.0/24"
+    avz.1  = "${var.cidr_vpc_prefix}.111.0/24"
+    avz.2  = "${var.cidr_vpc_prefix}.112.0/24"
+    avz.3  = "${var.cidr_vpc_prefix}.113.0/24"
+    avz.4  = "${var.cidr_vpc_prefix}.114.0/24"
+    avz.5  = "${var.cidr_vpc_prefix}.115.0/24"
+    avz.6  = "${var.cidr_vpc_prefix}.116.0/24"
+    avz.7  = "${var.cidr_vpc_prefix}.117.0/24"
+    avz.8  = "${var.cidr_vpc_prefix}.118.0/24"
+    avz.9  = "${var.cidr_vpc_prefix}.119.0/24"
+  },
+
+  cidr_private {
+    avz.0  = "${var.cidr_vpc_prefix}.210.0/24"
+    avz.1  = "${var.cidr_vpc_prefix}.211.0/24"
+    avz.2  = "${var.cidr_vpc_prefix}.212.0/24"
+    avz.3  = "${var.cidr_vpc_prefix}.213.0/24"
+    avz.4  = "${var.cidr_vpc_prefix}.214.0/24"
+    avz.5  = "${var.cidr_vpc_prefix}.215.0/24"
+    avz.6  = "${var.cidr_vpc_prefix}.216.0/24"
+    avz.7  = "${var.cidr_vpc_prefix}.217.0/24"
+    avz.8  = "${var.cidr_vpc_prefix}.218.0/24"
+    avz.9  = "${var.cidr_vpc_prefix}.219.0/24"    
+  }
+
+  kubernetes_public {
+    api.0  = "${var.cidr_vpc_prefix}.110.1"
+    dns.0  = "${var.cidr_vpc_prefix}.110.5"
+  }
+
+  kubernetes_private {
+    api.0  = "${var.cidr_vpc_prefix}.210.1"
+    dns.0  = "${var.cidr_vpc_prefix}.210.5"
+  }
 }
 
 ############################################################
@@ -16,6 +67,15 @@ variable "ssh" {
   default = {
     ssh_priv         = "../../config/aws_key"
     ssh_pub          = "../../config/aws_key.pub"
+  }
+}
+
+variable "project" {
+  default = {
+    main             = "k8s"
+    etcd             = "etcd"
+    kubeapi          = "kubeapi"
+    kubelet          = "kubelet"
   }
 }
 
@@ -56,52 +116,6 @@ variable "instance_sport_price" {
   }
 }
 
-variable "vpc_cidr" {
-  default = {
-    dev              = "10.11.0.0/16"
-    acc              = "10.12.0.0/16"
-    prd              = "10.13.0.0/16"
-  }
-}
-
-variable "subnet_private" {
-  default = { 
-    dev.eu-west-1a   = "10.11.1.0/24"
-    dev.eu-west-1b   = "10.11.11.0/24"
-    dev.eu-west-1c   = "10.11.21.0/24"
-    acc.eu-west-1a   = "10.12.2.0/24"
-    acc.eu-west-1b   = "10.12.12.0/24"
-    acc.eu-west-1c   = "10.12.22.0/24"
-    prd.eu-west-1a   = "10.13.3.0/24"
-    prd.eu-west-1b   = "10.13.13.0/24"
-    prd.eu-west-1c   = "10.13.23.0/24"
-  }
-}
-
-variable "subnet_public" {
-  default = {
-    dev.eu-west-1a   = "10.11.101.0/24"
-    dev.eu-west-1b   = "10.11.111.0/24"
-    dev.eu-west-1c   = "10.11.121.0/24"
-    acc.eu-west-1a   = "10.12.102.0/24"
-    acc.eu-west-1b   = "10.12.112.0/24"
-    acc.eu-west-1c   = "10.12.122.0/24"
-    prd.eu-west-1a   = "10.13.103.0/24"
-    prd.eu-west-1b   = "10.13.113.0/24"
-    prd.eu-west-1c   = "10.13.123.0/24"
-  }
-}
-
-
-variable "project" {
-  default = {
-    main             = "k8s"
-    etcd             = "etcd"
-    kubeapi          = "kubeapi"
-    kubelet          = "kubelet"
-  }
-}
-
 variable "kubernetes" {
   default = {
     ##########################################
@@ -128,10 +142,6 @@ variable "kubernetes" {
     state-metrics     = "v1.3.1"
     addon-resizer     = "1.7"
 
-    service_ip        = "10.11.101.1"
-    service_ip_range  = "10.11.101.0/24"
-    flannel_ip_range  = "192.168.0.0/16"
-    cluster_dns       = "10.11.101.10"
     cluster_domain    = "cluster.local"
 
     namespace_demo    = "kube-public"

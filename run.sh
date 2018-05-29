@@ -32,22 +32,26 @@ cat <<_EOF_
 
 	$1
 
-	Usage: ${0} [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-A All] [-D Destroy]
+	Usage: ${0} -E <environment> -n <CIDR prefix x.x>
+					[-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
 
-		-h 		This help
-		-E		Environment (mandatory)
-		-i		Run infra
+		-E			Environment (mandatory)
+		-n			CIDR prefix [x.x] <first 2 digits of ipv4 network>
+
+		-i			Run infra
 		-e 		Run ETCD terraform
 		-a 		Run Kubernetes API server terraform
 		-k 		Run Kubernetes Kubelete terraform
-		-s		Run services
+		-s			Run services
+		-c			Custom scripts (if made available)
 		-A 		Run All terraform 
 		-D 		Run destroy terraform 
+		-h 		This help
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
 
-while getopts ":eiaskhADE:" opt; do
+while getopts ":eiaskhcADE:n:" opt; do
 	case $opt in
 		h)
 			usage
@@ -73,6 +77,10 @@ while getopts ":eiaskhADE:" opt; do
 			SERVICES=1
 			EXEC=1
 			;;
+		c)
+			CUSTOM=1
+			EXEC=1
+			;;
 		D)
 			DESTROY=1
 			EXEC=1
@@ -83,6 +91,9 @@ while getopts ":eiaskhADE:" opt; do
 			;;
 		E)
 			ENVIRONMENT=${OPTARG}
+			;;
+		n)
+			CIDR_PREFIX=${OPTARG}
 			;;
 		?)
 			usage
@@ -98,6 +109,7 @@ ETCD=${ETCD:-0}
 KUBEAPI=${KUBEAPI:-0}
 KUBELET=${KUBELET:-0}
 SERVICES=${SERVICES:-0}
+CUSTOM=${CUSTOM:-0}
 DESTROY=${DESTROY:-0}
 
 CURRENT_FOLDER=$(pwd)
@@ -113,6 +125,7 @@ git submodule init
 git submodule update
 [[ $? -ne 0 ]] 			&& log 3 "Failed to update submodules"
 
+[[ "${CIDR_PREFIX}" == "" ]] 	&& usage "No CIDR prefix (-n) set"
 [[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
 [[ ${EXEC} -ne 1 ]] 		&& usage "No action selected"
 
@@ -123,7 +136,7 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 01_infra/terraform	
 	log 1 "Executing terraform init on infra"
 	terraform init > /dev/null
-	terraform apply
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 	cd -
 fi
 
@@ -133,7 +146,7 @@ if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 02_etcd/terraform
 	log 1 "Executing terraform init etcd"
 	terraform init > /dev/null
-	terraform apply 
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 	cd -
 fi
 
@@ -142,7 +155,7 @@ if [ ${KUBEAPI} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 03_kubeapi/terraform
 	log 1 "Executing terraform init kubeapi"
 	terraform init > /dev/null
-	terraform apply 
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 	cd -
 fi
 
@@ -151,15 +164,31 @@ if [ ${KUBELET} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 04_kubelet/terraform
 	log 1 "Executing terraform init kubelet"
 	terraform init > /dev/null
-	terraform apply 
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 	cd -
 fi
 
-if [ ${SERVICES} -eq 1 -o ${ALL} -eq 1 ]; then
+if [ ${SERVICES} -eq 1 -o ${ALL} -ne 1 ]; then
 	[[ ! -d "05_services" ]] && log 3 "Unable to find services folder for option -s"
 	cd 05_services/terraform
 	log 1 "Executing terraform init services"
 	terraform init > /dev/null
-	terraform apply
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 	cd -
+fi
+
+if [ ${CUSTOM} -eq 1 -o ${ALL} -eq 1 ]; then
+	[[ ! -d "06_custom" ]] && log 3 "Unable to find custom folder for option -s"
+	cd 06_custom/terraform
+	log 1 "Executing terraform init custom"
+	terraform init > /dev/null
+	terraform apply -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
+	cd -
+fi
+
+if [ ${DESTROY} -eq 1 ]; then
+	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
+	cd 01_infra/terraform
+	log 1 "Executing terraform destroy"
+	terraform destroy -var env=${ENVIRONMENT} -var cidr_prefix=${CIDR_PREFIX}
 fi

@@ -23,7 +23,7 @@ module "ssl_kubeapi_csr" {
                           "kubernetes.default.svc",
                           "kubernetes.default.svc.${var.kubernetes["cluster_domain"]}",
                           "127.0.0.1",
-                          "${var.kubernetes["service_ip"]}",
+                          "${lookup(local.kubernetes_public, "api.0")}",
                           "*.${module.site.region}.compute.internal",
                           "*.compute.internal",
                           "*.${module.site.region}.compute.amazonaws.com",
@@ -41,7 +41,7 @@ module "ssl_kubeapi_csr" {
                         ]
   ip_addresses          = [
                           "127.0.0.1",
-                          "${var.kubernetes["service_ip"]}"
+                          "${lookup(local.kubernetes_public, "api.0")}"
   ]
 }
 
@@ -85,10 +85,10 @@ data "template_file" "instance-kubeapi" {
   vars {
     kubernetes_version    = "${var.kubernetes["k8s"]}"
 
-    service_ip            = "${var.kubernetes["service_ip"]}"
-    service_ip_range      = "${var.kubernetes["service_ip_range"]}"
-    flannel_ip_range      = "${var.kubernetes["flannel_ip_range"]}"
-    cluster_dns           = "${var.kubernetes["cluster_dns"]}"
+    service_ip            = "${lookup(local.kubernetes_public, "api.0")}"
+    service_ip_range      = "${lookup(local.cidr_public, "avz.0")}"
+    cluster_dns           = "${lookup(local.kubernetes_public, "dns.0")}"
+
     cluster_domain        = "${var.kubernetes["cluster_domain"]}"
     
     cni_plugin_version    = "${var.kubernetes["cni_plugins"]}"
@@ -161,7 +161,7 @@ module "instance_kubeapi" {
   tags = {
     kubeapi                   = true
     KubernetesCluster         = "${var.kubernetes["name"]}-${module.site.environment}"
-    kubeVersion               = "${var.kubernetes["k8s"]}"
+    kubernetesVersion         = "${var.kubernetes["k8s"]}"
   }
 
   instance_name               = "${var.project["kubeapi"]}"

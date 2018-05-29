@@ -1,0 +1,10 @@
+.DS_Store
+terraform_modules/*
+terraform_state/*
+shared/aws_credentials.tf
+shared/ssh*
+deploy/k8s/*
+config/*
+*.tfstate
+*.tfstate.backup
+.terraform
