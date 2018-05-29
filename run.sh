@@ -168,7 +168,7 @@ if [ ${KUBELET} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd -
 fi
 
-if [ ${SERVICES} -eq 1 -o ${ALL} -ne 1 ]; then
+if [ ${SERVICES} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "05_services" ]] && log 3 "Unable to find services folder for option -s"
 	cd 05_services/terraform
 	log 1 "Executing terraform init services"
