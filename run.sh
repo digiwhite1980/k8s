@@ -1,4 +1,5 @@
 #!/bin/sh
+# vim: set ts=3
 ########################################################################
 
 function log {
@@ -33,20 +34,20 @@ cat <<_EOF_
 	$1
 
 	Usage: ${0} -E <environment> -n <CIDR prefix x.x>
-			[-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
+		[-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
 
 		-E		* Environment 
 		-n		CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
 
 		-i		Run infra
-		-e 		Run ETCD terraform
-		-a 		Run Kubernetes API server terraform
-		-k 		Run Kubernetes Kubelete terraform
+		-e 	Run ETCD terraform
+		-a 	Run Kubernetes API server terraform
+		-k 	Run Kubernetes Kubelete terraform
 		-s		Run services
 		-c		Custom scripts (if made available)
-		-A 		Run All terraform 
-		-D 		Run destroy terraform 
-		-h 		This help
+		-A 	Run All terraform 
+		-D 	Run destroy terraform 
+		-h 	This help
 
 		* switches are mandatory
 _EOF_
@@ -120,16 +121,14 @@ TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
 binCheck git terraform
 
 [[ ! -x $(basename ${0}) ]] 	&& log 3 "Please execute $(basename ${0}) from local directory (./run.sh)"
+[[ ! -f terraform_modules/.git ]] && rm -fr terraform_modules > /dev/null 2>&1
 
 git submodule add --force  https://github.com/digiwhite1980/terraform.git terraform_modules
-[[ $? -ne 0 ]]	 		&& log 3 "Failed to initialize submodules"
-
-git submodule update
-[[ $? -ne 0 ]] 			&& log 3 "Failed to update submodules"
+[[ $? -ne 0 ]]	 					&& log 3 "Failed to initialize submodules"
 
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
-[[ ${EXEC} -ne 1 ]] 		&& usage "No action selected"
+[[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
 
 ########################################################################################
 
@@ -141,7 +140,6 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
-
 
 if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "02_etcd" ]] && log 3 "Unable to find etcd folder for option -e"
