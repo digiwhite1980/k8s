@@ -153,16 +153,16 @@ data "template_file" "kubectlconfig" {
   template             = "${file("../../03_kubeapi/terraform/templates/template_kubectl_config.tpl")}"
 
   vars {
-    root_path          = "${path.cwd}"
-    kubeapi_url        = "https://kubeapi.${module.site.environment}.${module.site.domain_name}"
-    clustername        = "${module.site.environment}-${var.kubernetes["k8s"]}"
+    root_path          = "${path.cwd}/../.."
+    kubeapi_url        = "https://${module.elb_kubeapi.dns_name}"
+    clustername        = "${module.site.environment}-${var.kubernetes["name"]}"
   }
 }
 
 resource "null_resource" "kubectlconfig" {
   triggers {
     ssl_kubeapi_crt    = "${module.ssl_kubeapi_crt.cert_pem}"
-    record_kubeapi     = "${module.route53_record_kubeapi.fqdn}"
+    kubeapi_url        = "${module.elb_kubeapi.dns_name}"
   }
   provisioner "local-exec" { command = "mkdir -p $HOME/.kube; cat > $HOME/.kube/config <<EOL\n${data.template_file.kubectlconfig.rendered}\nEOL\n" }
 }

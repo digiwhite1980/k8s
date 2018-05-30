@@ -1,8 +1,8 @@
 apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority: {root_path}/config/ca.crt
-    server: {kubeapi_url}
+    certificate-authority: ${root_path}/config/ca.crt
+    server: ${kubeapi_url}
   name: ${clustername}
 contexts:
 - context:
@@ -18,7 +18,7 @@ current-context: ${clustername}
 kind: Config
 preferences: {}
 users:
-- name: ${clustername}
+- name: ${clustername}-admin
   user:
-    client-certificate: {root_path}/config/kubeapi.crt
-    client-key: {root_path}/config/kubeapi.key
+    client-certificate: ${root_path}/config/kubeapi.crt
+    client-key: ${root_path}/config/kubeapi.key
