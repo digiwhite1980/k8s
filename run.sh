@@ -32,11 +32,11 @@ cat <<_EOF_
 
 	$1
 
-	Usage: ${0} 	-E <environment> -n <CIDR prefix x.x>
+	Usage: ${0} -E <environment> -n <CIDR prefix x.x>
 			[-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
 
-		-E		Environment (mandatory)
-		-n		CIDR prefix [x.x] <first 2 digits of ipv4 network>
+		-E		* Environment 
+		-n		CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
 
 		-i		Run infra
 		-e 		Run ETCD terraform
@@ -47,6 +47,8 @@ cat <<_EOF_
 		-A 		Run All terraform 
 		-D 		Run destroy terraform 
 		-h 		This help
+
+		* switches are mandatory
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
@@ -119,13 +121,13 @@ binCheck git terraform
 
 [[ ! -x $(basename ${0}) ]] 	&& log 3 "Please execute $(basename ${0}) from local directory (./run.sh)"
 
-git submodule init
+git submodule add --force  https://github.com/digiwhite1980/terraform.git terraform_modules
 [[ $? -ne 0 ]]	 		&& log 3 "Failed to initialize submodules"
 
 git submodule update
 [[ $? -ne 0 ]] 			&& log 3 "Failed to update submodules"
 
-[[ "${CIDR_PREFIX}" == "" ]] 	&& usage "No CIDR prefix (-n) set"
+[[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
 [[ ${EXEC} -ne 1 ]] 		&& usage "No action selected"
 
@@ -136,7 +138,7 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 01_infra/terraform	
 	log 1 "Executing terraform init on infra"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -146,7 +148,7 @@ if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 02_etcd/terraform
 	log 1 "Executing terraform init etcd"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -155,7 +157,7 @@ if [ ${KUBEAPI} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 03_kubeapi/terraform
 	log 1 "Executing terraform init kubeapi"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -164,7 +166,7 @@ if [ ${KUBELET} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 04_kubelet/terraform
 	log 1 "Executing terraform init kubelet"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -173,7 +175,7 @@ if [ ${SERVICES} -eq 1 -a ${ALL} -ne 1 ]; then
 	cd 05_services/terraform
 	log 1 "Executing terraform init services"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -182,7 +184,7 @@ if [ ${CUSTOM} -eq 1 -o ${ALL} -eq 1 ]; then
 	cd 06_custom/terraform
 	log 1 "Executing terraform init custom"
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -190,5 +192,5 @@ if [ ${DESTROY} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
 	cd 01_infra/terraform
 	log 1 "Executing terraform destroy"
-	terraform destroy -var env=${ENVIRONMENT} -var cidr_vpc_prefix=${CIDR_PREFIX}
+	terraform destroy -var env=${ENVIRONMENT} ${CIDR_ADDON}
 fi
