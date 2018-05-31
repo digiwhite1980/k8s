@@ -53,6 +53,10 @@ data "template_file" "k8s_secrets" {
   }
 }
 
+data "template_file" "k8s_storageclass" {
+  template             = "${file("../../deploy/templates/00_storageclass.tpl")}"
+}
+
 data "template_file" "k8s_kubedns" {
   template             = "${file("../../deploy/templates/01_kubeDNS.tpl")}"
 
@@ -85,6 +89,18 @@ data "template_file" "k8s_dashboard" {
   vars {
     dashboard_version  = "${var.kubernetes["dashboard"]}"
   }
+}
+
+data "template_file" "k8s_heapster" {
+  template             = "${file("../../deploy/templates/03_heapster.tpl")}"
+
+  vars {
+    cluster_domain     = "${var.kubernetes["cluster_domain"]}"
+  }
+}
+
+data "template_file" "k8s_influxdb" {
+  template             = "${file("../../deploy/templates/03_influxdb.tpl")}"
 }
 
 data "template_file" "k8s_state-metrics" {
@@ -135,9 +151,12 @@ resource "null_resource" "k8s_services" {
   provisioner "local-exec" { command = "curl -L -o ../../deploy/k8s/00_weavenet.yaml 'https://cloud.weave.works/k8s/net?k8s-version=${var.kubernetes["k8s"]}'" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_namespaces.yaml <<EOL\n${data.template_file.k8s_namespaces.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_secrets.yaml <<EOL\n${data.template_file.k8s_secrets.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_storageclass.yaml <<EOL\n${data.template_file.k8s_storageclass.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_kubeDNS.yaml <<EOL\n${data.template_file.k8s_kubedns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_coreDNS.yaml <<EOL\n${data.template_file.k8s_coredns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_busybox.yaml <<EOL\n${data.template_file.k8s_busybox.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_heapster.yaml <<EOL\n${data.template_file.k8s_heapster.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_influxdb.yaml <<EOL\n${data.template_file.k8s_influxdb.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/02_dashboard.yaml <<EOL\n${data.template_file.k8s_dashboard.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/05_kube-state-metrics.yaml <<EOL\n${data.template_file.k8s_state-metrics.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/06_ingress_backend.yaml <<EOL\n${data.template_file.k8s_ingress.rendered}\nEOL\n" }
@@ -152,6 +171,8 @@ resource "null_resource" "k8s_cni" {
   # We also depend on kubectl (we expect it to be avialable within your path)
   ################################################################################
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_weavenet.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_namespaces.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_storageclass.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_secrets.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/01_coreDNS.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/02_dashboard.yaml; true" }

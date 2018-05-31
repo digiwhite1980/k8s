@@ -15,10 +15,10 @@ data:
         errors
         health
         log stdout
-        kubernetes ${kubedns_domain} in-addr.arpa ip6.arpa {
+        kubernetes ${kubedns_domain} {
           pods verified
           upstream
-          fallthrough in-addr.arpa ip6.arpa
+          fallthrough
         }
         prometheus :9153
         proxy . /etc/resolv.conf

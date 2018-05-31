@@ -1,27 +1,13 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pvc-fs-demo
+  name: pvc-aws-demo
   namespace: ${namespace}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "aws-efs"
 spec:
   accessModes:
-    - ReadWriteOnce
-  volumeMode: Filesystem
+    - ReadWriteMany
   resources:
     requests:
       storage: 2Gi
-  storageClassName: slow
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pvc-block-demo
-  namespace: ${namespace}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  volumeMode: Block
-  resources:
-    requests:
-      storage: 2Gi
-  storageClassName: slow
