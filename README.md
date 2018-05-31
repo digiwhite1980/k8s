@@ -31,25 +31,25 @@ The following switches are available.
 ```
 ./run.sh
 
-	No environment (-E) set
+  No environment (-E) set
 
-	Usage: ./run.sh -E <environment> -n <CIDR prefix x.x>
-			[-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
+  Usage: ./run.sh -E <environment> -n <CIDR prefix x.x>
+                  [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
 
-		-E		* Environment
-		-n		CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
+  -E	* Environment
+  -n	CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
 
-		-i		Run infra
-		-e 	Run ETCD terraform
-		-a 	Run Kubernetes API server terraform
-		-k 	Run Kubernetes Kubelete terraform
-		-s		Run services
-		-c		Custom scripts (if made available)
-		-A 	Run All terraform
-		-D 	Run destroy terraform
-		-h 	This help
+  -i	Run infra
+  -e 	Run ETCD terraform
+  -a 	Run Kubernetes API server terraform
+  -k 	Run Kubernetes Kubelete terraform
+  -s	Run services
+  -c	Custom scripts (if made available)
+  -A 	Run All terraform
+  -D 	Run destroy terraform
+  -h 	This help
 
-		* switches are mandatory
+* switches are mandatory
 ```
 As described there is one mandatory switch (-E) which is used for the environment. Optionally the (-n) switch can be added to change the cidr_prefix.
 the switches (-e -a -k -s -c) represent the different direcories (01 to 06). When executing, terraform will run from the given numbered folder and downwards due to the needed dependencies.
