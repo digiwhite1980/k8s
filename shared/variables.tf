@@ -105,8 +105,8 @@ variable "instance_count" {
     etcd_min         = 2
     kubeapi          = 1
     kubeapi_min      = 1
-    kubelet          = 6
-    kubelet_min      = 6
+    kubelet          = 3
+    kubelet_min      = 3
   }
 }
 
