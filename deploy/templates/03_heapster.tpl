@@ -34,8 +34,8 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /heapster
-        - --source=kubernetes:https://kubernetes.default
-        - --sink=influxdb:http://monitoring-influxdb.kube-system.svc:8086
+        - --source=kubernetes:https://kubernetes.default.svc.${cluster_domain}
+        - --sink=influxdb:http://monitoring-influxdb.kube-system.svc.${cluster_domain}:8086
         ports:
         - containerPort: 8082
 ---

@@ -1,4 +1,5 @@
 #!/bin/sh
+# vim: set ts=3
 ########################################################################
 
 function log {
@@ -30,6 +31,7 @@ function binCheck {
 function usage {
 cat <<_EOF_
 
+<<<<<<< HEAD
 	$1
 
 	Usage: ${0} -E <environment> -n <CIDR prefix x.x>
@@ -49,6 +51,27 @@ cat <<_EOF_
 		-h 		This help
 
 		* switches are mandatory
+=======
+$1
+
+  Usage: ${0} -E <environment> -n <CIDR prefix x.x>
+              [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
+
+  -E   * Environment 
+  -n   CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
+  
+  -i   Run infra
+  -e   Run ETCD terraform
+  -a   Run Kubernetes API server terraform
+  -k   Run Kubernetes Kubelete terraform
+  -s   Run services
+  -c   Custom scripts (if made available)
+  -A   Run All terraform 
+  -D   Run destroy terraform 
+  -h   This help
+
+   *   switches are mandatory
+>>>>>>> v1.9
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
@@ -120,16 +143,22 @@ TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
 binCheck git terraform
 
 [[ ! -x $(basename ${0}) ]] 	&& log 3 "Please execute $(basename ${0}) from local directory (./run.sh)"
+[[ ! -f terraform_modules/.git ]] && rm -fr terraform_modules > /dev/null 2>&1
 
 git submodule add --force  https://github.com/digiwhite1980/terraform.git terraform_modules
+<<<<<<< HEAD
 [[ $? -ne 0 ]]	 		&& log 3 "Failed to initialize submodules"
 
 git submodule update
 [[ $? -ne 0 ]] 			&& log 3 "Failed to update submodules"
 
+=======
+[[ $? -ne 0 ]]	 					&& log 3 "Failed to initialize submodules"
+
+>>>>>>> v1.9
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
-[[ ${EXEC} -ne 1 ]] 		&& usage "No action selected"
+[[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
 
 ########################################################################################
 
@@ -141,7 +170,6 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
-
 
 if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "02_etcd" ]] && log 3 "Unable to find etcd folder for option -e"
@@ -190,7 +218,19 @@ fi
 
 if [ ${DESTROY} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
+
+	log 1 "Deleting kubernetes yaml's with dependencies"
+
+	[[ -f "deploy/k8s/03_influxdb.yaml" ]] 			&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/03_influxdb.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/06_ingress_backend.yaml" ]] 	&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/06_ingress_backend.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/07_pvc.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/07_pvc.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/08_efs.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/08_efs.yaml > /dev/null 2>&1
+
 	cd 01_infra/terraform
 	log 1 "Executing terraform destroy"
+<<<<<<< HEAD
+=======
+
+>>>>>>> v1.9
 	terraform destroy -var env=${ENVIRONMENT} ${CIDR_ADDON}
 fi
