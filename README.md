@@ -64,9 +64,13 @@ cd /data/k8s/
 ./run.sh
 ```
 
-## 
+## External resources used by repo
 Download CNI plugins through git:
+```
 https://github.com/containernetworking/plugins
+```
 
 CoreDNS
+```
 https://github.com/coredns/deployment
+```
