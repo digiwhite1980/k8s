@@ -188,7 +188,16 @@ fi
 
 if [ ${DESTROY} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
+
+	log 1 "Deleting kubernetes yaml's with dependencies"
+
+	[[ -f "deploy/k8s/03_influxdb.yaml" ]] 			&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/03_influxdb.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/06_ingress_backend.yaml" ]] 	&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/06_ingress_backend.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/07_pvc.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/07_pvc.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/08_efs.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/08_efs.yaml > /dev/null 2>&1
+
 	cd 01_infra/terraform
 	log 1 "Executing terraform destroy"
+
 	terraform destroy -var env=${ENVIRONMENT} ${CIDR_ADDON}
 fi
