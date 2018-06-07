@@ -49,12 +49,14 @@ $1
   -D   Run destroy terraform 
   -h   This help
 
+  -o   Show terraform output
+
    *   switches are mandatory
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
 
-while getopts ":eiaskhcADE:n:" opt; do
+while getopts ":eiaskhcADoE:n:" opt; do
 	case $opt in
 		h)
 			usage
@@ -98,6 +100,10 @@ while getopts ":eiaskhcADE:n:" opt; do
 		n)
 			CIDR_PREFIX=${OPTARG}
 			;;
+		o)
+			OUTPUT=1
+			EXEC=1
+			;;
 		?)
 			usage
 			exit 1
@@ -114,6 +120,7 @@ KUBELET=${KUBELET:-0}
 SERVICES=${SERVICES:-0}
 CUSTOM=${CUSTOM:-0}
 DESTROY=${DESTROY:-0}
+OUTPUT=${OUTPUT:-0}
 
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
@@ -188,7 +195,25 @@ fi
 
 if [ ${DESTROY} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
+
+	log 1 "Deleting kubernetes yaml's with dependencies"
+
+	[[ -f "deploy/k8s/03_influxdb.yaml" ]] 			&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/03_influxdb.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/06_ingress_backend.yaml" ]] 	&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/06_ingress_backend.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/07_pvc.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/07_pvc.yaml > /dev/null 2>&1
+	[[ -f "deploy/k8s/08_efs.yaml" ]] 					&& kubectl --kubeconfig config/kubeconfig delete -f deploy/k8s/08_efs.yaml > /dev/null 2>&1
+
 	cd 01_infra/terraform
 	log 1 "Executing terraform destroy"
+
 	terraform destroy -var env=${ENVIRONMENT} ${CIDR_ADDON}
+fi
+
+if [ ${OUTPUT} -eq 1 ]; then
+	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
+
+	log 1 "Terraform output"
+
+	cd 01_infra/terraform
+	terraform output
 fi

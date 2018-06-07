@@ -104,13 +104,13 @@ module "sg_ingress_management" {
     {
       from_port     = "${var.ports["ssh"]}"
       to_port       = "${var.ports["ssh"]}"
-      protocol      = "TCP"
+      protocol      = "tcp"
       cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
     },
     {
       from_port     = "${var.ports["https"]}"
       to_port       = "${var.ports["https"]}"
-      protocol      = "TCP"
+      protocol      = "tcp"
       cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
     }
   ]
@@ -151,7 +151,7 @@ module "sg_gress_kubernetes" {
     {
       from_port       = "${var.ports["ssh"]}"
       to_port         = "${var.ports["ssh"]}"
-      protocol        = "TCP"
+      protocol        = "tcp"
       cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
       self            = true
     }
