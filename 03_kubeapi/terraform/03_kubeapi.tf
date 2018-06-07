@@ -167,6 +167,11 @@ resource "null_resource" "kubectlconfig" {
   provisioner "local-exec" { command = "mkdir -p $HOME/.kube; cat > $HOME/.kube/config <<EOL\n${data.template_file.kubectlconfig.rendered}\nEOL\n" }
 }
 
+resource "null_resource" "kubectl" {
+  provisioner "local-exec" { command = "curl -L -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${var.kubernetes["k8s"]}/bin/linux/amd64/kubectl" }
+  provisioner "local-exec" { command = "chmod 755 /usr/bin/kubectl" }
+}
+
 # ####################################################################
 
 module "instance_kubeapi" {
@@ -301,9 +306,9 @@ module "elb_kubeapi_internal" {
   listener = [
     {
       instance_port       = "${var.ports["https"]}"
-      instance_protocol   = "TCP"
+      instance_protocol   = "tcp"
       lb_port             = "${var.ports["https"]}"
-      lb_protocol         = "TCP"
+      lb_protocol         = "tcp"
       #lb_protocol         = "HTTP"
       #ssl_certificate_id  = "${var.ssl_arn}"
     }
@@ -314,7 +319,7 @@ module "elb_kubeapi_internal" {
       healthy_threshold   = 2
       unhealthy_threshold = 2
       timeout             = 3
-      target              = "TCP:${var.ports["https"]}"
+      target              = "tcp:${var.ports["https"]}"
       interval            = 15
     }
   ]
