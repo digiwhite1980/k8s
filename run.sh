@@ -140,6 +140,14 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 
 ########################################################################################
 
+if [ ! -f config/aws_key ]; then
+	cd 01_infra/terraform
+	log 1 "AWS SSH Keys not found. Creating"
+	terraform init > /dev/null
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
+	cd -
+fi
+
 if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find infra folder for option -i"
 	cd 01_infra/terraform	
