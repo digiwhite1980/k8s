@@ -28,6 +28,21 @@ function binCheck {
 	done
 }
 
+function createTfstate {
+
+	##################################################################
+	# We assume working in the directory where the symbolic link state
+	# file needs to be placed
+	##################################################################
+	if [ ! -L terraform.tfstate ]; then
+		rm terraform.tfstate > /dev/null 2>&1
+		rm terraform.tfstate.backup > /dev/null 2>&1
+
+		ln -s ../../terraform_state/terraform.tfstate terraform.tfstate
+		ln -s ../../terraform_state/terraform.tfstate.backup terraform.tfstate.backup
+	fi
+}
+
 function usage {
 cat <<_EOF_
 
@@ -138,11 +153,14 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 [[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
 [[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
 
+[[ ! -d ${TERRAFORM_STATE} ]] && mkdir ${TERRAFORM_STATE}
+
 ########################################################################################
 
 if [ ! -f config/aws_key ]; then
 	cd 01_infra/terraform
 	log 1 "AWS SSH Keys not found. Creating"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
 	cd -
@@ -152,6 +170,7 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find infra folder for option -i"
 	cd 01_infra/terraform	
 	log 1 "Executing terraform init on infra"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
@@ -161,6 +180,7 @@ if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "02_etcd" ]] && log 3 "Unable to find etcd folder for option -e"
 	cd 02_etcd/terraform
 	log 1 "Executing terraform init etcd"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
@@ -170,6 +190,7 @@ if [ ${KUBEAPI} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "03_kubeapi" ]] && log 3 "Unable to find kubeapi folder for option -a"
 	cd 03_kubeapi/terraform
 	log 1 "Executing terraform init kubeapi"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
@@ -179,6 +200,7 @@ if [ ${KUBELET} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "04_kubelet" ]] && log 3 "Unable to find kubelet folder for option -k"
 	cd 04_kubelet/terraform
 	log 1 "Executing terraform init kubelet"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
@@ -188,6 +210,7 @@ if [ ${SERVICES} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "05_services" ]] && log 3 "Unable to find services folder for option -s"
 	cd 05_services/terraform
 	log 1 "Executing terraform init services"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
@@ -197,6 +220,7 @@ if [ ${CUSTOM} -eq 1 -o ${ALL} -eq 1 ]; then
 	[[ ! -d "06_custom" ]] && log 3 "Unable to find custom folder for option -s"
 	cd 06_custom/terraform
 	log 1 "Executing terraform init custom"
+	createTfstate
 	terraform init > /dev/null
 	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -

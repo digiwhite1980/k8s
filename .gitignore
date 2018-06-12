@@ -1,6 +1,6 @@
 .DS_Store
 terraform_modules/*
-terraform_state/*
+terraform_state/*tfstate*
 shared/aws_credentials.tf
 shared/ssh*
 deploy/k8s/*

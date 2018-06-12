@@ -54,41 +54,6 @@ module "ssl_kubelet_crt" {
 
 ##############################################################################################
 
-module "ssl_kubelet_crt_24" {
-  source                = "../../terraform_modules/ssl_locally_signed_cert"
-
-  validity_period_hours = "24"
-
-  cert_request_pem      = "${module.ssl_kubelet_csr.cert_request_pem}"
-  ca_private_key_pem    = "${module.ssl_ca_key.private_key_pem}"
-  ca_cert_pem           = "${module.ssl_ca_crt.cert_pem}"
-}
-
-resource "null_resource" "ssl_kubelet_crt_24" {
-  triggers {
-    ssl_ca_crt              = "${module.ssl_kubelet_crt.cert_pem}"
-  }
-  provisioner "local-exec" { command = "cat > ../../config/kubelet_24.crt <<EOL\n${module.ssl_kubelet_crt_24.cert_pem}\nEOL\n" }
-}
-
-module "ssl_kubeapi_crt_24" {
-  source                = "../../terraform_modules/ssl_locally_signed_cert"
-
-  validity_period_hours = "24"
-
-  cert_request_pem      = "${module.ssl_kubeapi_csr.cert_request_pem}"
-  ca_private_key_pem    = "${module.ssl_ca_key.private_key_pem}"
-  ca_cert_pem           = "${module.ssl_ca_crt.cert_pem}"
-}
-
-resource "null_resource" "ssl_kubeapi_crt_24" {
-  triggers {
-    ssl_ca_crt              = "${module.ssl_kubeapi_crt.cert_pem}"
-  }
-  provisioner "local-exec" { command = "cat > ../../config/kubeapi_24.crt <<EOL\n${module.ssl_kubeapi_crt_24.cert_pem}\nEOL\n" }
-}
-##############################################################################################
-
 resource "null_resource" "ssl_kubelet_key" {
   triggers {
     ssl_ca_crt              = "${module.ssl_kubelet_key.private_key_pem}"
@@ -158,12 +123,10 @@ data "template_file" "instance-kubelet" {
 
   vars {
     kubernetes_version    = "${var.kubernetes["k8s"]}"
-    kubeapi_lb_endpoint   = "https://${module.route53_record_kubeapi.fqdn}"
 
     service_ip            = "${lookup(local.kubernetes_public, "api.0")}"
     service_ip_range      = "${lookup(local.cidr_public, "avz.0")}"
     cluster_dns           = "${lookup(local.kubernetes_public, "dns.0")}"
-
     cluster_domain        = "${module.site.domain_name}"
 
     docker_port           = "${var.ports["docker"]}"
