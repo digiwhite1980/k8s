@@ -152,7 +152,7 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ ! -d ${TERRAFORM_STATE} ]] && mkdir ${TERRAFORM_STATE}
-[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
+[[ ! -d ${CONFIG_DIR} ]] && mkdir ${CONFIG_DIR}
 
 [[ ! -f shared/aws_credentials.tf ]] 	&& usage "File shared/aws_credentials.tf not found. Please see README.md"
 [[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
@@ -250,7 +250,8 @@ if [ ${OUTPUT} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
 
 	log 1 "Terraform output"
+	cd 05_services/terraform
 
-	cd 01_infra/terraform
+	createTfstate
 	terraform output
 fi
