@@ -31,7 +31,7 @@ function binCheck {
 function usage {
 cat <<_EOF_
 
-$1
+  $1
 
   Usage: ${0} -E <environment> -n <CIDR prefix x.x>
               [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
@@ -55,6 +55,7 @@ $1
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
+
 
 while getopts ":eiaskhcADoE:n:" opt; do
 	case $opt in
@@ -138,6 +139,14 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 [[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
 
 ########################################################################################
+
+if [ ! -f config/aws_key ]; then
+	cd 01_infra/terraform
+	log 1 "AWS SSH Keys not found. Creating"
+	terraform init > /dev/null
+	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
+	cd -
+fi
 
 if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find infra folder for option -i"
