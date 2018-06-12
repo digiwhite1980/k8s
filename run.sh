@@ -140,6 +140,7 @@ OUTPUT=${OUTPUT:-0}
 
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
+CONFIG_DIR=${CURRENT_FOLDER}/config
 
 binCheck git terraform
 
@@ -150,10 +151,13 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 [[ $? -ne 0 ]]	 					&& log 3 "Failed to initialize submodules"
 
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
-[[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
-[[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
-
 [[ ! -d ${TERRAFORM_STATE} ]] && mkdir ${TERRAFORM_STATE}
+[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
+
+[[ ! -f shared/aws_credentials.tf ]] 	&& usage "File shared/aws_credentials.tf not found. Please see README.md"
+[[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
+[[ ${EXEC} -ne 1 ]] 							&& usage "No action selected"
+
 
 ########################################################################################
 
@@ -162,7 +166,7 @@ if [ ! -f config/aws_key ]; then
 	log 1 "AWS SSH Keys not found. Creating"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
+	terraform apply -auto-approve -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
 	cd -
 fi
 
