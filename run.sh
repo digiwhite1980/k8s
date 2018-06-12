@@ -31,7 +31,7 @@ function binCheck {
 function usage {
 cat <<_EOF_
 
-$1
+  $1
 
   Usage: ${0} -E <environment> -n <CIDR prefix x.x>
               [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
