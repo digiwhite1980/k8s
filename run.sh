@@ -56,6 +56,7 @@ _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
 
+
 while getopts ":eiaskhcADoE:n:" opt; do
 	case $opt in
 		h)
