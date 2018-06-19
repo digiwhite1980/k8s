@@ -141,6 +141,7 @@ OUTPUT=${OUTPUT:-0}
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
 CONFIG_DIR=${CURRENT_FOLDER}/config
+DEPLOY_DIR=${CURRENT_FOLDER}/deploy/k8s
 CONFIG_FILE=${CONFIG_DIR}/run.conf
 
 binCheck git terraform
@@ -153,7 +154,8 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ ! -d ${TERRAFORM_STATE} ]] && mkdir ${TERRAFORM_STATE}
-[[ ! -d ${CONFIG_DIR} ]] && mkdir ${CONFIG_DIR}
+[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
+[[ ! -d ${DEPLOY_DIR} ]] 		&& mkdir ${DEPLOY_DIR}
 
 [[ ! -f shared/aws_credentials.tf ]] 	&& usage "File shared/aws_credentials.tf not found. Please see README.md"
 [[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
