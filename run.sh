@@ -141,6 +141,7 @@ OUTPUT=${OUTPUT:-0}
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
 CONFIG_DIR=${CURRENT_FOLDER}/config
+CONFIG_FILE=${CONFIG_DIR}/run.conf
 
 binCheck git terraform
 
@@ -158,12 +159,15 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 [[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
 [[ ${EXEC} -ne 1 ]] 							&& usage "No action selected"
 
-
+########################################################################################
+# The possible configuration options which are specified will be saved if not set
+########################################################################################
+# to build
 ########################################################################################
 
 if [ ! -f config/aws_key ]; then
 	cd 01_infra/terraform
-	log 1 "AWS SSH Keys not found. Creating"
+	log 1 "AWS SSH Keys not found. Creating first..."
 	createTfstate
 	terraform init > /dev/null
 	terraform apply -auto-approve -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
