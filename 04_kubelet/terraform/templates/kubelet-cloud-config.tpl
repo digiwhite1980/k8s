@@ -121,7 +121,7 @@ write_files:
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kubelet \
             --allow-privileged \
-            --cloud-provider=external \
+            --cloud-provider=aws \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
@@ -132,7 +132,7 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubelet.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubelet-key.pem \
-            --v=4
+            --v=3
       [Install]
       WantedBy=multi-user.target
 
