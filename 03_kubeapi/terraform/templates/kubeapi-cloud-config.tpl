@@ -91,8 +91,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota \
-          --enable-admission-plugins=Initializers \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,Initializers \
           --allow-privileged=true \
           --audit-log-format=json \
           --bind-address=0.0.0.0 \
