@@ -140,6 +140,9 @@ OUTPUT=${OUTPUT:-0}
 
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
+CONFIG_DIR=${CURRENT_FOLDER}/config
+DEPLOY_DIR=${CURRENT_FOLDER}/deploy/k8s
+CONFIG_FILE=${CONFIG_DIR}/run.conf
 
 binCheck git terraform
 
@@ -150,19 +153,26 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 [[ $? -ne 0 ]]	 					&& log 3 "Failed to initialize submodules"
 
 [[ "${CIDR_PREFIX}" != "" ]] 	&& CIDR_ADDON="-var cidr_vpc_prefix=${CIDR_PREFIX}"
-[[ "${ENVIRONMENT}" == "" ]] 	&& usage "No environment (-E) set"
-[[ ${EXEC} -ne 1 ]] 				&& usage "No action selected"
-
 [[ ! -d ${TERRAFORM_STATE} ]] && mkdir ${TERRAFORM_STATE}
+[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
+[[ ! -d ${DEPLOY_DIR} ]] 		&& mkdir ${DEPLOY_DIR}
 
+[[ ! -f shared/aws_credentials.tf ]] 	&& usage "File shared/aws_credentials.tf not found. Please see README.md"
+[[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
+[[ ${EXEC} -ne 1 ]] 							&& usage "No action selected"
+
+########################################################################################
+# The possible configuration options which are specified will be saved if not set
+########################################################################################
+# to build
 ########################################################################################
 
 if [ ! -f config/aws_key ]; then
 	cd 01_infra/terraform
-	log 1 "AWS SSH Keys not found. Creating"
+	log 1 "AWS SSH Keys not found. Creating first..."
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
+	terraform apply -auto-approve -var env=${ENVIRONMENT} ${CIDR_ADDON} --target=null_resource.ssh-key
 	cd -
 fi
 
@@ -246,7 +256,8 @@ if [ ${OUTPUT} -eq 1 ]; then
 	[[ ! -d "01_infra" ]] && log 3 "Unable to find custom folder for option -D"
 
 	log 1 "Terraform output"
+	cd 05_services/terraform
 
-	cd 01_infra/terraform
+	createTfstate
 	terraform output
 fi

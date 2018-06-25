@@ -121,7 +121,7 @@ write_files:
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kubelet \
             --allow-privileged \
-            --cloud-provider=aws \
+            --cloud-provider=external \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
