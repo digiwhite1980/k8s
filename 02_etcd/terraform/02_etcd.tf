@@ -157,7 +157,7 @@ data "template_file" "etcd_cloudformation" {
   }
 }
 
-module "kubelet_cloudformation_stack" {
+module "etcd_cloudformation_stack" {
   source               = "../../terraform_modules/cloudformation_stack"
 
   name                 = "${module.site.project}${module.site.environment}etcd"
