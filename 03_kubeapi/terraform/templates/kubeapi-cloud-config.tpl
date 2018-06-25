@@ -63,7 +63,7 @@ write_files:
           --privileged \
           --volume=/etc/kubernetes/:/etc/kubernetes/ \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-            kube-proxy \
+            proxy \
             --logtostderr=true \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
             --proxy-mode=iptables \
@@ -90,13 +90,12 @@ write_files:
         --volume=/etc/kubernetes/:/etc/kubernetes/ \
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-apiserver \
+          apiserver \
           --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,Initializers \
           --allow-privileged=true \
           --audit-log-format=json \
           --bind-address=0.0.0.0 \
           --client-ca-file=/etc/kubernetes/ssl/ca.pem \
-          --cloud-provider=external \
           --enable-swagger-ui=true \
           --etcd-servers=${etcd_endpoint} \
           --etcd-cafile=/etc/kubernetes/ssl/ca.pem \
@@ -183,7 +182,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-controller-manager \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-controller-manager \
+          controller-manager \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
             --leader-elect=true \
             --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
@@ -209,7 +208,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-scheduler \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-        kube-scheduler \
+        scheduler \
           --leader-elect=true \
           --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
           --v=3

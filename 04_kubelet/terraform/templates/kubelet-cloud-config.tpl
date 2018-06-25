@@ -153,7 +153,7 @@ write_files:
         --volume=/etc/kubernetes:/etc/kubernetes \
         --privileged \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-proxy \
+          proxy \
           --logtostderr=true \
           --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
           --proxy-mode=iptables \
