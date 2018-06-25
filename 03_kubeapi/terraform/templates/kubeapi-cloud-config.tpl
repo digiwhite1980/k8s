@@ -63,7 +63,7 @@ write_files:
           --privileged \
           --volume=/etc/kubernetes/:/etc/kubernetes/ \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-            proxy \
+            kube-proxy \
             --logtostderr=true \
             --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
             --proxy-mode=iptables \
@@ -90,7 +90,7 @@ write_files:
         --volume=/etc/kubernetes/:/etc/kubernetes/ \
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          apiserver \
+          kube-apiserver \
           --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,Initializers \
           --allow-privileged=true \
           --audit-log-format=json \
@@ -182,13 +182,12 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-controller-manager \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          controller-manager \
-            --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-            --leader-elect=true \
-            --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-            --root-ca-file=/etc/kubernetes/ssl/ca.pem \
-            --cloud-provider=external \
-            --v=3
+            kube-controller-manager \
+              --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+              --leader-elect=true \
+              --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
+              --root-ca-file=/etc/kubernetes/ssl/ca.pem \
+              --v=3
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -208,10 +207,10 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-scheduler \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-        scheduler \
-          --leader-elect=true \
-          --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-          --v=3
+          kube-scheduler \
+            --leader-elect=true \
+            --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+            --v=3
       Restart=on-failure
       RestartSec=5
       [Install]

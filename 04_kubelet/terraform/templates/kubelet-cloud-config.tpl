@@ -152,12 +152,12 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --volume=/etc/kubernetes:/etc/kubernetes \
         --privileged \
-        gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          proxy \
-          --logtostderr=true \
-          --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-          --proxy-mode=iptables \
-          --v=3
+          gcr.io/google-containers/hyperkube:${kubernetes_version} \
+            kube-proxy \
+              --logtostderr=true \
+              --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+              --proxy-mode=iptables \
+              --v=3
       Restart=on-failure
       RestartSec=5
       [Install]
