@@ -141,7 +141,7 @@ module "etcd_launch_configuration" {
 }
 
 data "template_file" "etcd_cloudformation" {
-  template              = "${file("../../04_kubelet/terraform/templates/kubelet-cloudformation.tpl")}"
+  template              = "${file("../../02_etcd/terraform/templates/etcd-cloudformation.tpl")}"
 
   vars {
     cluster_name        = "${var.kubernetes["name"]}-${module.site.environment}"
@@ -154,6 +154,9 @@ data "template_file" "etcd_cloudformation" {
     max_size            = "${var.instance_count["etcd"]}"
     min_size            = "${var.instance_count["etcd_min"]}"
     pause_time          = "PT60S"
+
+    etcd_tag            = "${module.site.environment}"
+    etcd_version        = "${var.kubernetes["etcd"]}"
   }
 }
 
