@@ -146,8 +146,6 @@ resource "null_resource" "k8s_services" {
   #   #filename = "test-${uuid()}"
   #   elb_controller_dns_name = "${module.elb_kubeapi_internal.dns_name}"
   # }
-  provisioner "local-exec" { command = "curl -L -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${var.kubernetes["k8s"]}/bin/linux/amd64/kubectl" }
-  provisioner "local-exec" { command = "chmod 755 /usr/bin/kubectl" }
   provisioner "local-exec" { command = "curl -L -o ../../deploy/k8s/00_weavenet.yaml 'https://cloud.weave.works/k8s/net?k8s-version=${var.kubernetes["k8s"]}'" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_namespaces.yaml <<EOL\n${data.template_file.k8s_namespaces.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_secrets.yaml <<EOL\n${data.template_file.k8s_secrets.rendered}\nEOL\n" }

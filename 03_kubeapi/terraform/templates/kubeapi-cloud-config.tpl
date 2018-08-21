@@ -91,19 +91,19 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,Initializers \
           --allow-privileged=true \
           --audit-log-format=json \
           --bind-address=0.0.0.0 \
           --client-ca-file=/etc/kubernetes/ssl/ca.pem \
-          --cloud-provider=aws \
+          --cloud-provider=external \
           --enable-swagger-ui=true \
           --etcd-servers=${etcd_endpoint} \
           --etcd-cafile=/etc/kubernetes/ssl/ca.pem \
           --etcd-certfile=/etc/kubernetes/ssl/etcd-server.pem \
           --etcd-keyfile=/etc/kubernetes/ssl/etcd-server-key.pem \
           --logtostderr=true \
-          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true \
+          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true,admissionregistration.k8s.io/v1alpha1 \
           --secure-port=443 \
           --service-account-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
           --service-cluster-ip-range=${service_ip_range} \
@@ -153,7 +153,7 @@ write_files:
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kubelet \
             --allow-privileged \
-            --cloud-provider=aws \
+            --cloud-provider=external \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
@@ -188,7 +188,7 @@ write_files:
             --leader-elect=true \
             --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
             --root-ca-file=/etc/kubernetes/ssl/ca.pem \
-            --cloud-provider=aws \
+            --cloud-provider=external \
             --v=3
       Restart=on-failure
       RestartSec=5
