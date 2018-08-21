@@ -78,7 +78,7 @@ module "kubelet_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["kubelet"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
-  spot_price           = "${var.instance_sport_price["kubelet"]}"
+  spot_price           = "${var.instance_spot_price["kubelet"]}"
 
   key_name             = "${module.key_pair.ssh_name_key}"
 

@@ -122,7 +122,7 @@ module "etcd_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["etcd"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
-  #spot_price           = "${var.instance_sport_price["etcd"]}"
+  #spot_price           = "${var.instance_spot_price["etcd"]}"
 
   key_name             = "${module.key_pair.ssh_name_key}"
 
@@ -141,7 +141,7 @@ module "etcd_launch_configuration" {
 }
 
 data "template_file" "etcd_cloudformation" {
-  template              = "${file("../../04_kubelet/terraform/templates/kubelet-cloudformation.tpl")}"
+  template              = "${file("../../02_etcd/terraform/templates/etcd-cloudformation.tpl")}"
 
   vars {
     cluster_name        = "${var.kubernetes["name"]}-${module.site.environment}"
@@ -154,10 +154,13 @@ data "template_file" "etcd_cloudformation" {
     max_size            = "${var.instance_count["etcd"]}"
     min_size            = "${var.instance_count["etcd_min"]}"
     pause_time          = "PT60S"
+
+    etcd_tag            = "${module.site.environment}"
+    etcd_version        = "${var.kubernetes["etcd"]}"
   }
 }
 
-module "kubelet_cloudformation_stack" {
+module "etcd_cloudformation_stack" {
   source               = "../../terraform_modules/cloudformation_stack"
 
   name                 = "${module.site.project}${module.site.environment}etcd"
@@ -218,7 +221,7 @@ module "kubelet_cloudformation_stack" {
 # #####################################################################################
 
 module "elb_etcd" {
-  source                  = "../../terraform_modules/elb_map"
+  source                  = "../../terraform_modules/elb_map_asg"
   project                 = "${module.site.project}"
   environment             = "${module.site.environment}"
 
