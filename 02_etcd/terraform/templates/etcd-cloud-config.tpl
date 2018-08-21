@@ -31,9 +31,7 @@ write_files:
         --net=host \
         --name=etcd \
         --volume=/var/run/docker.sock:/var/run/docker.sock \
-        --volume=/etcd/ssl/:/etcd/ssl/ \
-        --volume=/etcd/data/:/etcd/data/ \    
-        --volume=/etcd/wal/:/etcd/wal/ \                
+        --volume=/etcd/:/etcd/ \
         -e DOCKER_EC2VAL=${EC2value} \
         --rm \
         digiwhite/etcd:${etcd_version}

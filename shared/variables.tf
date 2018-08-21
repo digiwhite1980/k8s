@@ -130,7 +130,7 @@ variable "kubernetes" {
     k8s               = "v1.9.7"
     cni_plugins       = "v0.7.1"
     proxy             = "0.3"
-    etcd              = "3.2.2"
+    etcd              = "3.3.9"
     coredns           = "1.1.2"
     #########################################
     # KubeDNS
