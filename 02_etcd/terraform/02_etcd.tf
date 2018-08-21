@@ -122,7 +122,12 @@ module "etcd_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["etcd"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
-  #spot_price           = "${var.instance_sport_price["etcd"]}"
+  #############################################################
+  # We dont use spot instances for etcd because we dont receive
+  # the ip address directly so it will not be assigned to 
+  # the loadBalancer
+  #############################################################
+  #spot_price           = "${var.instance_spot_price["etcd"]}"
 
   key_name             = "${module.key_pair.ssh_name_key}"
 

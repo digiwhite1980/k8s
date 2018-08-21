@@ -4,16 +4,16 @@ clusters:
 - cluster:
     certificate-authority-data: ${ssl_ca_crt}
     server: https://${elb_name}
-  name: kubernetes
+  name: ${clustername}
 contexts:
 - context:
-    cluster: kubernetes
+    cluster: ${clustername}
     namespace: default
     user: kubernetes-admin
-  name: kubernetes
+  name: ${clustername}
 users:
   - name: kubernetes-admin
     user:
       client-certificate-data: ${ssl_kubeapi_crt}
       client-key-data: ${ssl_kubeapi_key}
-current-context: kubernetes
+current-context: ${clustername}

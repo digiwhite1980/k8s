@@ -11,7 +11,7 @@ module "ssl_kubeapi_csr" {
   private_key_pem     = "${module.ssl_kubeapi_key.private_key_pem}"
 
   common_name         = "*"
-  organization        = "${module.site.project}" 
+  organization        = "system:nodes" 
   organizational_unit = "${module.site.project} - ${module.site.environment}"
   street_address      = [ ]
   locality            = "Amsterdam"
@@ -136,6 +136,7 @@ data "template_file" "kubeconfig" {
     ssl_ca_crt            = "${base64encode("${module.ssl_ca_crt.cert_pem}")}"
     ssl_kubeapi_key       = "${base64encode("${module.ssl_kubeapi_key.private_key_pem}")}"
     ssl_kubeapi_crt       = "${base64encode("${module.ssl_kubeapi_crt.cert_pem}")}"
+    clustername           = "${module.site.environment}-${var.kubernetes["name"]}"
   }
 }
 

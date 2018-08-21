@@ -110,9 +110,10 @@ variable "instance_count" {
   }
 }
 
-variable "instance_sport_price" {
+variable "instance_spot_price" {
   default = {
     kubelet         = "1.0"
+    etcd            = "1.0"
   }
 }
 

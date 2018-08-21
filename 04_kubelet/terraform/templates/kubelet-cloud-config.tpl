@@ -181,10 +181,6 @@ write_files:
     encoding: base64
     content: "${base64encode("${ssl_ca_crt}")}"
 
-  - path: /etc/kubernetes/ABAC-policy.json
-    content: |
-      {"apiVersion":"abac.authorization.kubernetes.io/v1beta1","kind":"Policy","spec":{"user":"system:serviceaccount:kube-system:default","namespace":"*","resource":"*","apiGroup":"*"}}
-
   - path: /etc/kubernetes/kubeconfig.yaml
     content: |
       apiVersion: v1

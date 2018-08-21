@@ -91,7 +91,7 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,EventRateLimit,Initializers,NodeRestriction,PVCProtection,SecurityContextDeny \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,Initializers,NodeRestriction,PVCProtection,SecurityContextDeny \
           --authorization-mode=RBAC,ABAC \
           --authorization-policy-file=/etc/kubernetes/ABAC-policy.json \
           --feature-gates=RotateKubeletClientCertificate=true,RotateKubeletServerCertificate=true \
@@ -106,7 +106,7 @@ write_files:
           --etcd-certfile=/etc/kubernetes/ssl/etcd-server.pem \
           --etcd-keyfile=/etc/kubernetes/ssl/etcd-server-key.pem \
           --logtostderr=true \
-          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true,admissionregistration.k8s.io/v1alpha1=true,eventratelimit.admission.k8s.io/v1alpha1=true \
+          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true,admissionregistration.k8s.io/v1alpha1=true\
           --secure-port=443 \
           --service-account-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
           --service-cluster-ip-range=${service_ip_range} \
@@ -259,6 +259,10 @@ write_files:
   - path: /etc/kubernetes/ssl/ca.pem
     encoding: "base64"
     content: "${base64encode("${ssl_ca_crt}")}"
+
+  - path: /etc/kubernetes/ABAC-policy.json
+    content: |
+      {"apiVersion":"abac.authorization.kubernetes.io/v1beta1","kind":"Policy","spec":{"user":"system:serviceaccount:kube-system:default","namespace":"*","resource":"*","apiGroup":"*"}}
 
 runcmd:
   - [ systemctl, enable, local-ipv4.service ]
