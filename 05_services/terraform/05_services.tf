@@ -83,6 +83,10 @@ data "template_file" "k8s_busybox" {
   template             = "${file("../../deploy/templates/01_busybox.tpl")}"
 }
 
+data "template_file" "k8s_alpine" {
+  template             = "${file("../../deploy/templates/01_alpine.tpl")}"
+}
+
 data "template_file" "k8s_dashboard" {
   template             = "${file("../../deploy/templates/02_dashboard.tpl")}"
 
@@ -152,6 +156,7 @@ resource "null_resource" "k8s_services" {
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_kubeDNS.yaml <<EOL\n${data.template_file.k8s_kubedns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_coreDNS.yaml <<EOL\n${data.template_file.k8s_coredns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_busybox.yaml <<EOL\n${data.template_file.k8s_busybox.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_alpine.yaml <<EOL\n${data.template_file.k8s_alpine.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/02_dashboard.yaml <<EOL\n${data.template_file.k8s_dashboard.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_heapster.yaml <<EOL\n${data.template_file.k8s_heapster.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_influxdb.yaml <<EOL\n${data.template_file.k8s_influxdb.rendered}\nEOL\n" }
