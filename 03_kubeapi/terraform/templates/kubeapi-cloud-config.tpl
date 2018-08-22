@@ -91,9 +91,8 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,Initializers,NodeRestriction,PVCProtection,SecurityContextDeny \
-          --authorization-mode=RBAC,ABAC \
-          --authorization-policy-file=/etc/kubernetes/ABAC-policy.json \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,PVCProtection \
+          --authorization-mode=AlwaysAllow \
           --feature-gates=RotateKubeletClientCertificate=true,RotateKubeletServerCertificate=true \
           --cloud-provider=aws \
           --allow-privileged=true \
