@@ -41,6 +41,10 @@ output "s3_docker_registry_arn" {
 
 data "template_file" "k8s_namespaces" {
   template             = "${file("../../deploy/templates/00_namespaces.tpl")}"
+
+  vars {
+    environment        = "${module.site.environment}"
+  }
 }
 
 data "template_file" "k8s_secrets" {
