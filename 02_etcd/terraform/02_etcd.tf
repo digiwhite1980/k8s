@@ -226,7 +226,7 @@ module "etcd_cloudformation_stack" {
 # #####################################################################################
 
 module "elb_etcd" {
-  source                  = "../../terraform_modules/elb_map"
+  source                  = "../../terraform_modules/elb_map_asg"
   project                 = "${module.site.project}"
   environment             = "${module.site.environment}"
 
