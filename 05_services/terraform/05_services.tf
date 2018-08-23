@@ -85,10 +85,18 @@ data "template_file" "k8s_coredns" {
 
 data "template_file" "k8s_busybox" {
   template             = "${file("../../deploy/templates/01_busybox.tpl")}"
+
+  vars {
+    namespace          = "${module.site.environment}"
+  }
 }
 
 data "template_file" "k8s_alpine" {
   template             = "${file("../../deploy/templates/01_alpine.tpl")}"
+
+  vars {
+    namespace          = "${module.site.environment}"
+  }
 }
 
 data "template_file" "k8s_dashboard" {
@@ -176,11 +184,13 @@ resource "null_resource" "k8s_cni" {
   # network. In this repo we chose for Weavenet.
   # We also depend on kubectl (we expect it to be avialable within your path)
   ################################################################################
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_namespaces.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_weavenet.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_secrets.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_storageclass.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/01_coreDNS.yaml; true" }
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/02_dashboard.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig config set-context ${module.site.enbironment}" }
 
   triggers = {
     provisioner = "${null_resource.k8s_services.id}"

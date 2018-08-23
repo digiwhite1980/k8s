@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: alpine
-  namespace: default
+  namespace: ${namespace}
 spec:
   replicas: 1
   template:

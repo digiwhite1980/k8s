@@ -122,10 +122,10 @@ variable "kubernetes" {
     ##########################################
     # SSL Validity = 1 year (8544 hours)
     ##########################################
-    ca_ssl_valid      = "8544"
-    etcd_ssl_valid    = "8544"
-    kubeapi_ssl_valid = "12"
-    kubelet_ssl_valid = "12" 
+    ca_ssl_valid      = "8644"
+    etcd_ssl_valid    = "8644"
+    kubeapi_ssl_valid = "8644"
+    kubelet_ssl_valid = "8644" 
     name              = "kube"
     k8s               = "v1.9.7"
     cni_plugins       = "v0.7.1"

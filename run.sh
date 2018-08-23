@@ -48,7 +48,7 @@ cat <<_EOF_
 
   $1
 
-  Usage: ${0} -E <environment> -n <CIDR prefix x.x>
+  Usage: ${0} -E <environment> -n <CIDR prefix x.x> [-y]
               [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
 
   -E   * Environment 
@@ -64,6 +64,8 @@ cat <<_EOF_
   -D   Run destroy terraform 
   -h   This help
 
+  -y   auto-approve terraform
+
   -o   Show terraform output
 
    *   switches are mandatory
@@ -72,7 +74,7 @@ _EOF_
 }
 
 
-while getopts ":eiaskhcADoE:n:" opt; do
+while getopts ":eiaskhycADoE:n:" opt; do
 	case $opt in
 		h)
 			usage
@@ -115,6 +117,9 @@ while getopts ":eiaskhcADoE:n:" opt; do
 			;;
 		n)
 			CIDR_PREFIX=${OPTARG}
+			;;
+		y)
+			AUTO="-auto-approve"
 			;;
 		o)
 			OUTPUT=1
@@ -182,7 +187,7 @@ if [ ${INFRA} -eq 1 -a ${ALL} -ne 1 ]; then
 	log 1 "Executing terraform init on infra"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -192,7 +197,7 @@ if [ ${ETCD} -eq 1 -a ${ALL} -ne 1 ]; then
 	log 1 "Executing terraform init etcd"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -202,7 +207,7 @@ if [ ${KUBEAPI} -eq 1 -a ${ALL} -ne 1 ]; then
 	log 1 "Executing terraform init kubeapi"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -212,7 +217,7 @@ if [ ${KUBELET} -eq 1 -a ${ALL} -ne 1 ]; then
 	log 1 "Executing terraform init kubelet"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -222,7 +227,7 @@ if [ ${SERVICES} -eq 1 -a ${ALL} -ne 1 ]; then
 	log 1 "Executing terraform init services"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
@@ -232,7 +237,7 @@ if [ ${CUSTOM} -eq 1 -o ${ALL} -eq 1 ]; then
 	log 1 "Executing terraform init custom"
 	createTfstate
 	terraform init > /dev/null
-	terraform apply -var env=${ENVIRONMENT} ${CIDR_ADDON}
+	terraform apply ${AUTO} -var env=${ENVIRONMENT} ${CIDR_ADDON}
 	cd -
 fi
 
