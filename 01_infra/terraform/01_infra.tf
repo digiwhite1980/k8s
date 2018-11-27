@@ -22,6 +22,8 @@ output "aws_availability_zones" {
   value = "${data.aws_availability_zones.site_avz.names}"
 }
 
+# #################################################################################
+
 resource "null_resource" "ssh-key" {
   # Any change to UUID (every apply) triggers re-provisioning
   # triggers {
@@ -69,11 +71,89 @@ module "subnet_public" {
   
   availability_zone = [ "${data.aws_availability_zones.site_avz.names}" ]
 
-  map_public_ip     = true                         
+  map_public_ip     = true            
+
+  tags = {
+    KubernetesCluster     = "${var.kubernetes["name"]}-${module.site.environment}"
+    KubernetesVersion     = "${var.kubernetes["k8s"]}"
+  }             
 }
 
 output "subnet_public" {
   value = "${module.subnet_public.id}"
+}
+
+# #################################################################################
+
+module "subnet_private" {
+  source            = "../../terraform_modules/subnet"
+
+  name              = "Private"
+
+  vpc_id            = "${module.site.aws_vpc_id}"
+  project           = "${module.site.project}"
+  environment       = "${module.site.environment}"
+
+  cidr_block        = [ "${local.cidr_private}" ]
+  
+  availability_zone = [ "${data.aws_availability_zones.site_avz.names}" ]
+
+  map_public_ip     = true                         
+}
+
+output "subnet_private" {
+  value = "${module.subnet_private.id}"
+}
+
+# #################################################################################
+# EIP count cannot be computed. Therefor we need to -target aws_availability_zones
+# first in order to generate a count.
+# #################################################################################
+
+module "eip_natgateway" {
+  source            = "../../terraform_modules/eip_default"
+
+  count             = "${length(data.aws_availability_zones.site_avz.names)}"
+}
+
+output "eip_natgateway" {
+  value = "${module.eip_natgateway.public_ip}"
+}
+
+# #################################################################################
+# The NAT gateway must be placed in the public subnet in order to route correctly
+# #################################################################################
+
+module "natgateway_private" {
+  source            = "../../terraform_modules/nat_gateway"
+
+  count             = "${length(data.aws_availability_zones.site_avz.names)}"
+  eip_id            = "${module.eip_natgateway.id}"
+  subnet_id         = "${module.subnet_public.id}"
+
+  name              = "${module.site.environment}"
+}
+
+# #################################################################################
+
+module "route_table_natgateway_private" {
+  source            = "../../terraform_modules/route_table_nat_gateway"
+
+  count             = "${length(data.aws_availability_zones.site_avz.names)}"
+  vpc_id            = "${module.site.aws_vpc_id}"
+  gateway_id        = "${module.natgateway_private.id}"
+  cidr_block        = "0.0.0.0/0"
+
+  project           = "${module.site.project}"
+  environment       = "${module.site.environment}"
+}
+
+module "route_table_association_natgateway_private" {
+  source            = "../../terraform_modules/route_table_association"
+
+  count             = "${length(data.aws_availability_zones.site_avz.names)}"
+  subnet_id         = "${module.subnet_private.id}"
+  route_table_id    = "${module.route_table_natgateway_private.id}"
 }
 
 # ##################################################################################
@@ -93,6 +173,8 @@ module "sg_ingress_internal" {
     }
   ]
 }
+
+# ##################################################################################
 
 module "sg_ingress_management" {
   source            = "../../terraform_modules/sg_ingress_map"
@@ -153,7 +235,6 @@ module "sg_gress_kubernetes" {
       to_port         = "${var.ports["ssh"]}"
       protocol        = "tcp"
       cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
-      self            = true
     }
   ]
 
@@ -292,4 +373,53 @@ module "route53_zone" {
   project             = "${module.site.project}"
   environment         = "${module.site.environment}"
   domain_name         = "${module.site.environment}.${var.domainname}"
+}
+
+output "route53_zone_id" {
+	value = "${module.route53_zone.id}"
+}
+
+output "route53_domain" {
+	value = "${module.site.environment}.${var.domainname}"
+}
+
+module "instance_bastion" {
+  source                      = "../../terraform_modules/instance_spot"
+  spot_price                  = "${var.instance_spot_price["bastion"]}"
+
+  availability_zone           = "${element(data.aws_availability_zones.site_avz.names, 0)}"
+  
+  count                       = "${var.instance_count["bastion"]}"
+
+  tags = {
+    bastion                   = "${module.site.environment}"
+  }
+
+  instance_name               = "bastion"
+  environment                 = "${module.site.environment}"
+  aws_subnet_id               = "${element(module.subnet_public.id, 0)}"
+
+  ssh_user                    = "ubuntu"
+  ssh_name_key                = "${module.key_pair.ssh_name_key}"
+  ssh_pri_key                 = "${module.site.ssh_pri_key}"
+
+  region                      = "${module.site.region}"
+
+  aws_ami                     = "${data.aws_ami.ubuntu_ami.id}"
+
+  iam_instance_profile        = "${module.iam_instance_profile.name}"
+
+  root_block_device_size      = "20"
+
+  security_groups_ids         = [ "${module.sg_ingress_management.id}",
+                                  "${module.sg_egress.id}" ]
+
+  aws_instance_type           = "${var.instance["default"]}"
+  associate_public_ip_address = true
+
+  user_data_base64            = ""
+}
+
+output "instance_bastion_dns" {
+  value = "${module.instance_bastion.public_dns}"
 }

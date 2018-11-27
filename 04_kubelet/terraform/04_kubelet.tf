@@ -10,8 +10,8 @@ module "ssl_kubelet_csr" {
 
   private_key_pem     = "${module.ssl_kubelet_key.private_key_pem}"
 
-  common_name         = "*"
-  organization        = "${module.site.project}" 
+  common_name         = "kubelet"
+  organization        = "node" 
   organizational_unit = "${module.site.project} - ${module.site.environment}"
   street_address      = [ ]
   locality            = "Amsterdam"
@@ -23,7 +23,7 @@ module "ssl_kubelet_csr" {
                           "kubernetes.default.svc",
                           "kubernetes.default.svc.cluster.local",
                           "127.0.0.1",
-                          "${lookup(local.kubernetes_public, "api.0")}",
+                          "${lookup(local.kubernetes_private, "api.0")}",
                           "*.${module.site.region}.compute.internal",                          
                           "*.compute.internal",
                           "*.compute.amazonaws.com",
@@ -38,7 +38,7 @@ module "ssl_kubelet_csr" {
                         ]
   ip_addresses          = [
                           "127.0.0.1",
-                          "${lookup(local.kubernetes_public, "api.0")}"
+                          "${lookup(local.kubernetes_private, "api.0")}"
   ]
 }
 
@@ -78,7 +78,10 @@ module "kubelet_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["kubelet"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
-  spot_price           = "${var.instance_sport_price["kubelet"]}"
+  #####################################################################################
+  #Disable this line if on-demand instances are needed / to be used
+  #####################################################################################
+  #spot_price           = "${var.instance_spot_price["kubelet"]}"
 
   key_name             = "${module.key_pair.ssh_name_key}"
 
@@ -101,7 +104,7 @@ data "template_file" "kubelet_cloudformation" {
     kubernetes_version  = "${var.kubernetes["k8s"]}"
     environment         = "${module.site.environment}"
     resource_name       = "${var.kubernetes["name"]}${module.site.environment}kubelet"
-    subnet_ids          = "${join(",", module.subnet_public.id)}"
+    subnet_ids          = "${join(",", module.subnet_private.id)}"
     launch_name         = "${module.kubelet_launch_configuration.name}"
     max_size            = "${var.instance_count["kubelet"]}"
     min_size            = "${var.instance_count["kubelet_min"]}"
@@ -124,10 +127,10 @@ data "template_file" "instance-kubelet" {
   vars {
     kubernetes_version    = "${var.kubernetes["k8s"]}"
 
-    service_ip            = "${lookup(local.kubernetes_public, "api.0")}"
-    service_ip_range      = "${lookup(local.cidr_public, "avz.0")}"
-    cluster_dns           = "${lookup(local.kubernetes_public, "dns.0")}"
-    cluster_domain        = "${module.site.domain_name}"
+    service_ip            = "${lookup(local.kubernetes_private, "api.0")}"
+    service_ip_range      = "${lookup(local.cidr_private, "avz.0")}"
+    cluster_dns           = "${lookup(local.kubernetes_private, "dns.0")}"
+    cluster_domain        = "${var.kubernetes["cluster_domain"]}"
 
     docker_port           = "${var.ports["docker"]}"
     etcd_endpoint         = "https://${module.route53_record_etcd.fqdn}:2379"
@@ -142,6 +145,9 @@ data "template_file" "instance-kubelet" {
 
     ssl_etcd_key          = "${module.ssl_etcd_key.private_key_pem}"
     ssl_etcd_crt          = "${module.ssl_etcd_crt.cert_pem}"
+
+    environment           = "${module.site.environment}"
+    cluster_name          = "${var.kubernetes["name"]}-${module.site.environment}"
   }
 }
 
@@ -155,64 +161,33 @@ data "template_cloudinit_config" "instance-kubelet" {
   }
 }
 
-# ####################################################################
+# ##############################################################################################
+# # Here we add the kublet user (used in o=node/cn=user SSL certificate) to clusterRoles:
+# # - system:node
+# # - system:node-proxier
+# ##############################################################################################
 
-# module "instance_kubelet" {
-#   source                      = "../../terraform_modules/instance_spot"
+data "template_file" "kubelet-rolebindings" {
+  template             = "${file("../../04_kubelet/terraform/templates/roleBindings.tpl")}"
+}
 
-#   availability_zone           = "${element(data.aws_availability_zones.site_avz.names, 0)}"
-  
-#   count                       = "${var.instance_count["kubelet"]}"
+resource "null_resource" "wait_for_kubeapi" {
+  provisioner "local-exec" { command = "while [ $(kubectl cluster-info > /dev/null 2>&1; echo $?) -ne 0 ]; do sleep 10; done" }
 
-#   ###########################################################################################
-#   # Keep in mind that spot instances dont support Tags unless they are created through 
-#   # cloudformation / launch configuration.
-#   # Prefferably you would like to use the launc configuration aproach
-#   ###########################################################################################
-#   tags = {
-#     kubelet                   = true
-#     KubernetesCluster         = "${var.kubernetes["name"]}-${module.site.environment}"
-#   }
-#   ###########################################################################################
-  
-#   instance_name               = "${var.project["kubelet"]}"
-#   environment                 = "${module.site.environment}"
-#   aws_subnet_id               = "${element(module.subnet_public.id, 0)}"
+  ############################################################################################
+  # We wait untill kubectl is downloaded
+  ############################################################################################
+  triggers {
+    provisioner = "${null_resource.kubectl.id}"
+  }
+}
 
-#   ssh_user                    = "ubuntu"
-#   ssh_name_key                = "${module.key_pair.ssh_name_key}"
-#   ssh_pri_key                 = "${module.site.ssh_pri_key}"
+resource "null_resource" "kubelet-rolebindings-apply" {
 
-#   region                      = "${module.site.region}"
-
-#   aws_ami                     = "${data.aws_ami.ubuntu_ami.id}"
-
-#   iam_instance_profile        = "${module.iam_instance_profile.name}"
-
-#   root_block_device_size      = "20"
-
-#   spot_price                  = "1.0"
-#   wait_for_fulfillment        = true
-
-#   security_groups_ids         = [ "${module.sg_ingress_internal.id}",
-#                                   "${module.sg_ingress_management.id}",
-#                                   "${module.sg_ingress_external.id}",
-#                                   "${module.sg_egress.id}" ]
-
-#   aws_instance_type           = "${var.instance["kubelet"]}"
-#   associate_public_ip_address = true
-
-#   user_data_base64            = "${data.template_cloudinit_config.instance-kubelet.rendered}"
-# }
-
-# output "kubelet_public_ip" {
-#   value = "${module.instance_kubelet.public_ip}"
-# }
-
-# output "kubelet_private_ip" {
-#   value = "${module.instance_kubelet.private_ip}"
-# }
-
-# output "kubelet_public_dns" {
-#   value = "${module.instance_kubelet.public_dns}"
-# }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f - <<EOL\n${data.template_file.kubelet-rolebindings.rendered}\nEOL\n" }
+  # kubectl create clusterrolebinding kubelet --clusterrole=system:node --user=kubelet
+  # kubectl create clusterrolebinding kubelet-proxy --clusterrole=system:node-proxier --user=kubelet
+  triggers = {
+    provisioner = "${null_resource.wait_for_kubeapi.id}"
+  }
+}

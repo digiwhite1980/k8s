@@ -10,8 +10,14 @@ module "ssl_kubeapi_csr" {
 
   private_key_pem     = "${module.ssl_kubeapi_key.private_key_pem}"
 
-  common_name         = "*"
-  organization        = "${module.site.project}" 
+  #################################################################################
+  # common_name and organization are mappes to user and group for RBAC
+  #################################################################################
+  # We set common name to cluster-admin
+  # we set organization to system:masters
+  #################################################################################
+  common_name         = "cluster-admin"
+  organization        = "system:masters" 
   organizational_unit = "${module.site.project} - ${module.site.environment}"
   street_address      = [ ]
   locality            = "Amsterdam"
@@ -23,7 +29,7 @@ module "ssl_kubeapi_csr" {
                           "kubernetes.default.svc",
                           "kubernetes.default.svc.${var.kubernetes["cluster_domain"]}",
                           "127.0.0.1",
-                          "${lookup(local.kubernetes_public, "api.0")}",
+                          "${lookup(local.kubernetes_private, "api.0")}",
                           "*.${module.site.region}.compute.internal",
                           "*.compute.internal",
                           "*.${module.site.region}.compute.amazonaws.com",
@@ -41,7 +47,7 @@ module "ssl_kubeapi_csr" {
                         ]
   ip_addresses          = [
                           "127.0.0.1",
-                          "${lookup(local.kubernetes_public, "api.0")}"
+                          "${lookup(local.kubernetes_private, "api.0")}"
   ]
 }
 
@@ -61,6 +67,8 @@ module "ssl_kubeapi_crt" {
   ]
 }
 
+# ##############################################################################################
+
 resource "null_resource" "ssl_kubeapi_key" {
   triggers {
     ssl_ca_crt              = "${module.ssl_kubeapi_key.private_key_pem}"
@@ -75,58 +83,7 @@ resource "null_resource" "ssl_kubeapi_crt" {
   provisioner "local-exec" { command = "cat > ../../config/kubeapi.crt <<EOL\n${module.ssl_kubeapi_crt.cert_pem}\nEOL\n" }
 }
 
-
-
 # ##############################################################################################
-
-data "template_file" "instance-kubeapi" {
-  template                = "${file("../../03_kubeapi/terraform/templates/kubeapi-cloud-config.tpl")}"
-
-  vars {
-    kubernetes_version    = "${var.kubernetes["k8s"]}"
-
-    service_ip            = "${lookup(local.kubernetes_public, "api.0")}"
-    service_ip_range      = "${lookup(local.cidr_public, "avz.0")}"
-    cluster_dns           = "${lookup(local.kubernetes_public, "dns.0")}"
-
-    cluster_domain        = "${var.kubernetes["cluster_domain"]}"
-    
-    cni_plugin_version    = "${var.kubernetes["cni_plugins"]}"
-
-    instance_group        = "${module.site.environment}.${module.site.domain_name}"
-    docker_port           = "${var.ports["docker"]}"
-    #################################################################################
-    # We will use internal route53 DNS for our ELB endpoint
-    #################################################################################
-    etcd_version          = "${var.kubernetes["etcd"]}"
-    etcd_endpoint         = "https://${module.route53_record_etcd.fqdn}:2379"
-
-    ssl_kubeapi_key       = "${module.ssl_kubeapi_key.private_key_pem}"
-    ssl_kubeapi_crt       = "${module.ssl_kubeapi_crt.cert_pem}"
-    
-    ssl_ca_crt            = "${module.ssl_ca_crt.cert_pem}"
-
-    ssl_etcd_key          = "${module.ssl_etcd_key.private_key_pem}"
-    ssl_etcd_crt          = "${module.ssl_etcd_crt.cert_pem}"
-
-    kubeapi_lb_endpoint   = "https://kubeapi.${module.site.environment}.${module.site.domain_name}"
-
-    PRIVATE_IPV4          = "$${PRIVATE_IPV4}"
-  }
-}
-######################################################################################
-# We use the template_cloudinit_config data type because we exceed the 16k user_data
-# limit from the template (ssl certificates)
-######################################################################################
-data "template_cloudinit_config" "kubeapi" {
-  gzip          = true
-  base64_encode = true
-
-  part {
-    content_type = "text/cloud-config"
-    content      = "${data.template_file.instance-kubeapi.rendered}"
-  }
-}
 
 data "template_file" "kubeconfig" {
   template                = "${file("../../03_kubeapi/terraform/templates/template_kubeconfig.tpl")}"
@@ -136,6 +93,8 @@ data "template_file" "kubeconfig" {
     ssl_ca_crt            = "${base64encode("${module.ssl_ca_crt.cert_pem}")}"
     ssl_kubeapi_key       = "${base64encode("${module.ssl_kubeapi_key.private_key_pem}")}"
     ssl_kubeapi_crt       = "${base64encode("${module.ssl_kubeapi_crt.cert_pem}")}"
+    clustername           = "${module.site.environment}-${var.kubernetes["name"]}"
+    namespace             = "${module.site.environment}"
   }
 }
 
@@ -172,65 +131,118 @@ resource "null_resource" "kubectl" {
   provisioner "local-exec" { command = "chmod 755 /usr/bin/kubectl" }
 }
 
-# ####################################################################
+# ##############################################################################################
 
-module "instance_kubeapi" {
-  source                      = "../../terraform_modules/instance"
+data "template_file" "instance-kubeapi" {
+  template                = "${file("../../03_kubeapi/terraform/templates/kubeapi-cloud-config.tpl")}"
 
-  availability_zone           = "${element(data.aws_availability_zones.site_avz.names, 0)}"
-  
-  count                       = "${var.instance_count["kubeapi"]}"
+  vars {
+    kubernetes_version    = "${var.kubernetes["k8s"]}"
 
-  tags = {
-    kubeapi                   = true
-    KubernetesCluster         = "${var.kubernetes["name"]}-${module.site.environment}"
-    kubernetesVersion         = "${var.kubernetes["k8s"]}"
+    service_ip            = "${lookup(local.kubernetes_private, "api.0")}"
+    service_ip_range      = "${lookup(local.cidr_private, "avz.0")}"
+    cluster_dns           = "${lookup(local.kubernetes_private, "dns.0")}"
+
+    cluster_domain        = "${var.kubernetes["cluster_domain"]}"
+    
+    cni_plugin_version    = "${var.kubernetes["cni_plugins"]}"
+
+    instance_group        = "${module.site.environment}.${module.site.domain_name}"
+    docker_port           = "${var.ports["docker"]}"
+    #################################################################################
+    # We will use internal route53 DNS for our ELB endpoint
+    #################################################################################
+    etcd_version          = "${var.kubernetes["etcd"]}"
+    etcd_endpoint         = "https://${module.route53_record_etcd.fqdn}:2379"
+
+    ssl_kubeapi_key       = "${module.ssl_kubeapi_key.private_key_pem}"
+    ssl_kubeapi_crt       = "${module.ssl_kubeapi_crt.cert_pem}"
+    
+    ssl_ca_crt            = "${module.ssl_ca_crt.cert_pem}"
+
+    ssl_etcd_key          = "${module.ssl_etcd_key.private_key_pem}"
+    ssl_etcd_crt          = "${module.ssl_etcd_crt.cert_pem}"
+
+    kubeapi_lb_endpoint   = "https://kubeapi.${module.site.environment}.${module.site.domain_name}"
+
+    PRIVATE_IPV4          = "$${PRIVATE_IPV4}"
+
+    environment           = "${module.site.environment}"
+    cluster_name          = "${var.kubernetes["name"]}-${module.site.environment}"
   }
+}
+######################################################################################
+# We use the template_cloudinit_config data type because we exceed the 16k user_data
+# limit from the template (ssl certificates)
+######################################################################################
+data "template_cloudinit_config" "kubeapi" {
+  gzip          = true
+  base64_encode = true
 
-  instance_name               = "${var.project["kubeapi"]}"
-  environment                 = "${module.site.environment}"
-  aws_subnet_id               = "${element(module.subnet_public.id, 0)}"
-
-  ssh_user                    = "ubuntu"
-  ssh_name_key                = "${module.key_pair.ssh_name_key}"
-  ssh_pri_key                 = "${module.site.ssh_pri_key}"
-
-  region                      = "${module.site.region}"
-
-  aws_ami                     = "${data.aws_ami.ubuntu_ami.id}"
-
-  iam_instance_profile        = "${module.iam_instance_profile.name}"
-
-  root_block_device_size      = "20"
-
-  security_groups_ids         = [ "${module.sg_gress_kubernetes.id}" ]
-
-  aws_instance_type           = "${var.instance["kubeapi"]}"
-  associate_public_ip_address = true
-
-  user_data_base64            = "${data.template_cloudinit_config.kubeapi.rendered}"
+  part {
+    content_type = "text/cloud-config"
+    content      = "${data.template_file.instance-kubeapi.rendered}"
+  }
 }
 
-output "kubeapi_public_ip" {
-  value = "${module.instance_kubeapi.public_ip}"
+module "kubeapi_launch_configuration" {
+  source               = "../../terraform_modules/launch_configuration"
+  
+  name_prefix          = "kubeapi-${module.site.project}-${module.site.environment}-"
+
+  image_id             = "${data.aws_ami.ubuntu_ami.id}"
+  instance_type        = "${var.instance["kubeapi"]}"
+  iam_instance_profile = "${module.iam_instance_profile.name}"
+  #############################################################
+  # We dont use spot instances for etcd because we dont receive
+  # the ip address directly so it will not be assigned to 
+  # the loadBalancer
+  #############################################################
+  #spot_price           = "${var.instance_spot_price["etcd"]}"
+
+  key_name             = "${module.key_pair.ssh_name_key}"
+
+  volume_size          = "20"
+
+  ebs_optimized        = false
+
+  associate_public_ip_address = false
+
+  user_data_base64     = "${data.template_cloudinit_config.kubeapi.rendered}"
+  
+  security_groups      = [ "${module.sg_gress_kubernetes.id}" ] 
 }
 
-output "kubeapi_private_ip" {
-  value = "${module.instance_kubeapi.private_ip}"
+data "template_file" "kubeapi_cloudformation" {
+  template              = "${file("../../03_kubeapi/terraform/templates/kubeapi-cloudformation.tpl")}"
+
+  vars {
+    cluster_name        = "${var.kubernetes["name"]}-${module.site.environment}"
+    kubernetes_version  = "${var.kubernetes["k8s"]}"
+    environment         = "${module.site.environment}"
+    resource_name       = "${var.kubernetes["name"]}${module.site.environment}kubeapi"
+    subnet_ids          = "${join(",", module.subnet_private.id)}"
+    launch_name         = "${module.kubeapi_launch_configuration.name}"
+    loadbalancer        = "\"${module.elb_kubeapi_internal.name}\",\"${module.elb_kubeapi.name}\"" 
+    max_size            = "${var.instance_count["kubeapi"]}"
+    min_size            = "${var.instance_count["kubeapi_min"]}"
+    pause_time          = "PT60S"
+  }
 }
 
-output "kubeapi_public_dns" {
-  value = "${module.instance_kubeapi.public_dns}"
-}
+module "kubeapi_cloudformation_stack" {
+  source               = "../../terraform_modules/cloudformation_stack"
 
-# ####################################################################
+  name                 = "${module.site.project}${module.site.environment}kubeapi"
+  template_body        = "${data.template_file.kubeapi_cloudformation.rendered}"
+}
 
 ######################################################################
 # This is an external LB so we could apply firewall rules through
 # security groups
 ######################################################################
 module "elb_kubeapi" {
-  source                  = "../../terraform_modules/elb_map"
+  source                  = "../../terraform_modules/elb_map_asg"
 
   project                 = "${module.site.project}"
   environment             = "${module.site.environment}"
@@ -248,8 +260,6 @@ module "elb_kubeapi" {
   # in order to keep the connection with kubectl exec -ti alive
   ####################################################################
   lb_idle_timeout         = 300
-
-  instances               = [ "${module.instance_kubeapi.id}" ]
 
   security_group_ids      = [ "${module.sg_egress.id}",
                               "${module.sg_ingress_management.id}" ]
@@ -276,13 +286,18 @@ module "elb_kubeapi" {
   ]
 }
 
+output "elb_kubeapi" {
+  value = "${module.elb_kubeapi.dns_name}"
+}
+
+
 ######################################################################
 # We use an internal LB for kube API communication. We dont have to 
 # applyfirewall rules because it is not accessable from the outside 
 # world
 ######################################################################
 module "elb_kubeapi_internal" {
-  source                  = "../../terraform_modules/elb_map"
+  source                  = "../../terraform_modules/elb_map_asg"
 
   project                 = "${module.site.project}"
   environment             = "${module.site.environment}"
@@ -294,9 +309,7 @@ module "elb_kubeapi_internal" {
     Internal              = true
   }
 
-  subnet_ids              = [ "${module.subnet_public.id}" ]
-
-  instances               = [ "${module.instance_kubeapi.id}" ]
+  subnet_ids              = [ "${module.subnet_private.id}" ]
 
   internal                = true
 
@@ -323,6 +336,10 @@ module "elb_kubeapi_internal" {
       interval            = 15
     }
   ]
+}
+
+output "elb_kubeapi_internal" {
+  value = "${module.elb_kubeapi_internal.dns_name}"
 }
 
 # ####################################################################

@@ -91,19 +91,22 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota,Initializers \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,Initializers,NodeRestriction,PVCProtection \
+          --authorization-mode=Node,RBAC \
+          --feature-gates=RotateKubeletClientCertificate=true,RotateKubeletServerCertificate=true \
+          --cloud-provider=aws \
           --allow-privileged=true \
           --audit-log-format=json \
           --bind-address=0.0.0.0 \
+          --profiling=false \
           --client-ca-file=/etc/kubernetes/ssl/ca.pem \
-          --cloud-provider=external \
           --enable-swagger-ui=true \
           --etcd-servers=${etcd_endpoint} \
           --etcd-cafile=/etc/kubernetes/ssl/ca.pem \
           --etcd-certfile=/etc/kubernetes/ssl/etcd-server.pem \
           --etcd-keyfile=/etc/kubernetes/ssl/etcd-server-key.pem \
           --logtostderr=true \
-          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true,admissionregistration.k8s.io/v1alpha1 \
+          --runtime-config=extensions/v1beta1/networkpolicies=true,extensions/v1beta1/deployments=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true,admissionregistration.k8s.io/v1alpha1=true\
           --secure-port=443 \
           --service-account-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
           --service-cluster-ip-range=${service_ip_range} \
@@ -112,7 +115,7 @@ write_files:
           --tls-ca-file=/etc/kubernetes/ssl/ca.pem \
           --tls-cert-file=/etc/kubernetes/ssl/kubeapi.pem \
           --tls-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-          --v=3 \
+          --v=1 \
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -153,7 +156,7 @@ write_files:
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kubelet \
             --allow-privileged \
-            --cloud-provider=external \
+            --cloud-provider=aws \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
@@ -165,7 +168,10 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubeapi.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-            --v=4
+            --node-labels kubernetes.io/role=kubeapi \
+            --node-labels kubernetes.io/environment=${environment} \
+            --node-labels kubernetes.io/cluster=${cluster_name} \
+            --v=1
       [Install]
       WantedBy=multi-user.target
 
@@ -183,13 +189,13 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-controller-manager \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-controller-manager \
-            --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-            --leader-elect=true \
-            --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-            --root-ca-file=/etc/kubernetes/ssl/ca.pem \
-            --cloud-provider=external \
-            --v=3
+            kube-controller-manager \
+              --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+              --leader-elect=true \
+              --service-account-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
+              --root-ca-file=/etc/kubernetes/ssl/ca.pem \
+              --cloud-provider=aws \
+              --v=3
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -209,10 +215,10 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --name=kube-scheduler \
           gcr.io/google-containers/hyperkube:${kubernetes_version} \
-        kube-scheduler \
-          --leader-elect=true \
-          --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-          --v=3
+          kube-scheduler \
+            --leader-elect=true \
+            --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+            --v=3
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -257,7 +263,13 @@ write_files:
     encoding: "base64"
     content: "${base64encode("${ssl_ca_crt}")}"
 
+  - path: /etc/kubernetes/ABAC-policy.json
+    content: |
+      {"apiVersion":"abac.authorization.kubernetes.io/v1beta1","kind":"Policy","spec":{"user":"system:serviceaccount:kube-system:default","namespace":"*","resource":"*","apiGroup":"*"}}
+
 runcmd:
+  - [ cp, /etc/kubernetes/ssl/ca.pem, /usr/local/share/ca-certificates/ca.crt ]
+  - [ update-ca-certificates, --fresh ]
   - [ systemctl, enable, local-ipv4.service ]
   - [ systemctl, start, local-ipv4.service ]
   - [ systemctl, enable, docker-tls-tcp.socket ]
@@ -281,4 +293,4 @@ runcmd:
   - [ systemctl, disable, accounts-daemon ]
   - [ systemctl, stop, accounts-daemon ] 
   - [ systemctl, disable, mdadm ]
-  - [ systemctl, stop, mdadm ] 
+  - [ systemctl, stop, mdadm ]

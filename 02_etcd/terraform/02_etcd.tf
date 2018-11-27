@@ -95,6 +95,7 @@ data "template_file" "instance-etcd" {
     # This variable is used to determine the ETCD instances by filtering
     ##########################################################################
     EC2value                  = "${module.site.environment}"
+    AWS_REGION                = "${var.aws_region}"
   }
 }
 
@@ -122,7 +123,12 @@ module "etcd_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["etcd"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
-  #spot_price           = "${var.instance_sport_price["etcd"]}"
+  #############################################################
+  # We dont use spot instances for etcd because we dont receive
+  # the ip address directly so it will not be assigned to 
+  # the loadBalancer
+  #############################################################
+  #spot_price           = "${var.instance_spot_price["etcd"]}"
 
   key_name             = "${module.key_pair.ssh_name_key}"
 
@@ -141,19 +147,22 @@ module "etcd_launch_configuration" {
 }
 
 data "template_file" "etcd_cloudformation" {
-  template              = "${file("../../04_kubelet/terraform/templates/kubelet-cloudformation.tpl")}"
+  template              = "${file("../../02_etcd/terraform/templates/etcd-cloudformation.tpl")}"
 
   vars {
     cluster_name        = "${var.kubernetes["name"]}-${module.site.environment}"
     kubernetes_version  = "${var.kubernetes["k8s"]}"
     environment         = "${module.site.environment}"
     resource_name       = "${var.kubernetes["name"]}${module.site.environment}etcd"
-    subnet_ids          = "${join(",", module.subnet_public.id)}"
+    subnet_ids          = "${join(",", module.subnet_private.id)}"
     launch_name         = "${module.etcd_launch_configuration.name}"
     loadbalancer        = "${module.elb_etcd.name}"
     max_size            = "${var.instance_count["etcd"]}"
     min_size            = "${var.instance_count["etcd_min"]}"
     pause_time          = "PT60S"
+
+    etcd_tag            = "${module.site.environment}"
+    etcd_version        = "${var.kubernetes["etcd"]}"
   }
 }
 
@@ -164,61 +173,10 @@ module "etcd_cloudformation_stack" {
   template_body        = "${data.template_file.etcd_cloudformation.rendered}"
 }
 
-# module "instance_etcd" {
-#   source                      = "../../terraform_modules/instance"
-
-#   availability_zone           = "${element(data.aws_availability_zones.site_avz.names, 0)}"
-  
-#   count                       = "${var.instance_count["etcd"]}"
-
-#   tags = {
-#     etcd                      = "${module.site.environment}"
-#     etcdVersion               = "${var.kubernetes["etcd"]}"
-#   }
-
-#   instance_name               = "${var.project["etcd"]}"
-#   environment                 = "${module.site.environment}"
-#   aws_subnet_id               = "${element(module.subnet_public.id, 0)}"
-
-#   ssh_user                    = "ubuntu"
-#   ssh_name_key                = "${module.key_pair.ssh_name_key}"
-#   ssh_pri_key                 = "${module.site.ssh_pri_key}"
-
-#   region                      = "${module.site.region}"
-
-#   aws_ami                     = "${data.aws_ami.ubuntu_ami.id}"
-
-#   iam_instance_profile        = "${module.iam_instance_profile.name}"
-
-#   root_block_device_size      = "20"
-
-#   security_groups_ids         = [ "${module.sg_ingress_internal.id}",
-#                                   "${module.sg_ingress_etcd.id}",
-#                                   "${module.sg_ingress_management.id}",
-#                                   "${module.sg_egress.id}" ]
-
-#   aws_instance_type           = "${var.instance["etcd"]}"
-#   associate_public_ip_address = true
-
-#   user_data_base64            = "${data.template_cloudinit_config.etcd.rendered}"
-# }
-
-# output "etcd_public_ip" {
-#   value = "${module.instance_etcd.public_ip}"
-# }
-
-# output "etcd_private_ip" {
-#   value = "${module.instance_etcd.private_ip}"
-# }
-
-# output "etcd_public_dns" {
-#   value = "${module.instance_etcd.public_dns}"
-# }
-
 # #####################################################################################
 
 module "elb_etcd" {
-  source                  = "../../terraform_modules/elb_map"
+  source                  = "../../terraform_modules/elb_map_asg"
   project                 = "${module.site.project}"
   environment             = "${module.site.environment}"
 
@@ -230,7 +188,7 @@ module "elb_etcd" {
 
   internal                = true
 
-  subnet_ids              = [ "${module.subnet_public.id}" ]
+  subnet_ids              = [ "${module.subnet_private.id}" ]
   security_group_ids      = [ "${module.sg_ingress_etcd.id}" ,
                               "${module.sg_egress.id}"]
 

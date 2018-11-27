@@ -121,7 +121,7 @@ write_files:
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kubelet \
             --allow-privileged \
-            --cloud-provider=external \
+            --cloud-provider=aws \
             --cluster-dns=${cluster_dns} \
             --cluster-domain=${cluster_domain} \
             --enable-controller-attach-detach=false \
@@ -132,7 +132,10 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubelet.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubelet-key.pem \
-            --v=4
+            --node-labels kubernetes.io/role=kubelet \
+            --node-labels kubernetes.io/environment=${environment} \
+            --node-labels kubernetes.io/cluster=${cluster_name} \
+            --v=1
       [Install]
       WantedBy=multi-user.target
 
@@ -152,12 +155,12 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         --volume=/etc/kubernetes:/etc/kubernetes \
         --privileged \
-        gcr.io/google-containers/hyperkube:${kubernetes_version} \
-          kube-proxy \
-          --logtostderr=true \
-          --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
-          --proxy-mode=iptables \
-          --v=3
+          gcr.io/google-containers/hyperkube:${kubernetes_version} \
+            kube-proxy \
+              --logtostderr=true \
+              --kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+              --proxy-mode=iptables \
+              --v=3
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -203,6 +206,8 @@ write_files:
       current-context: kubelet-context
 
 runcmd:
+  - [ cp, /etc/kubernetes/ssl/ca.pem, /usr/local/share/ca-certificates/ca.crt ]
+  - [ update-ca-certificates, --fresh ]
   - [ systemctl, enable, local-ipv4.service ]
   - [ systemctl, start, local-ipv4.service ]
   - [ systemctl, enable, cni-plugins.service ]
@@ -220,4 +225,4 @@ runcmd:
   - [ systemctl, disable, accounts-daemon ]
   - [ systemctl, stop, accounts-daemon ]  
   - [ systemctl, disable, mdadm ]
-  - [ systemctl, stop, mdadm ] 
+  - [ systemctl, stop, mdadm ]

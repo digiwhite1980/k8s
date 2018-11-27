@@ -40,6 +40,11 @@
       "Effect": "Allow",
       "Action": "es:*",
       "Resource": ["*"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "route53:*",
+      "Resource": ["*"]
     }
   ]
 }
