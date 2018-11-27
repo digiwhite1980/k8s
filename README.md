@@ -33,23 +33,33 @@ The following switches are available.
 
   No environment (-E) set
 
-  Usage: ./run.sh -E <environment> -n <CIDR prefix x.x>
-                  [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy]
+  Usage: ./run.sh -E <environment> [-n <CIDR prefix x.x>] <Option>
+              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X]
 
-  -E	* Environment
-  -n	CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
+  -E   * Environment
+  -r   {Region | AWS)
+  -n   CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
+  -h   This help
+  -y   auto-approve terraform
+  -R   restore kubectl config and kubectl binary
+  -o   Show terraform output
+  -X   [ only with -D ] dont run deletion of custom service scripts
 
-  -i	Run infra
-  -e 	Run ETCD terraform
-  -a 	Run Kubernetes API server terraform
-  -k 	Run Kubernetes Kubelete terraform
-  -s	Run services
-  -c	Custom scripts (if made available)
-  -A 	Run All terraform
-  -D 	Run destroy terraform
-  -h 	This help
+  Options *:
+  -i   Run infra
+  -e   Run ETCD terraform
+  -a   Run Kubernetes API server terraform
+  -k   Run Kubernetes Kubelete terraform
+  -s   Run services
+  -c   Run services custom (if made available)
+  -A   Run All terraform
 
-* switches are mandatory
+  -t   Taint services and apply again (only to use with -s or -c)
+
+  -D   Run destroy terraform
+  -d   Run destroy terraform (but only custom services)
+
+   *   switches are mandatory
 ```
 As described there is one mandatory switch (-E) which is used for the environment. Optionally the (-n) switch can be added to change the cidr_prefix.
 the switches (-e -a -k -s -c) represent the different direcories (01 to 06). When executing, terraform will run from the given numbered folder and downwards due to the needed dependencies.
