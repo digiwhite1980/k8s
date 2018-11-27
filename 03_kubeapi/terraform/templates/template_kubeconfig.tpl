@@ -8,7 +8,7 @@ clusters:
 contexts:
 - context:
     cluster: ${clustername}
-    namespace: default
+    namespace: ${namespace}
     user: kubernetes-admin
   name: ${clustername}
 users:

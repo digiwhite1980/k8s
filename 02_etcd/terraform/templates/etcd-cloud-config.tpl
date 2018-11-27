@@ -33,6 +33,7 @@ write_files:
         --volume=/var/run/docker.sock:/var/run/docker.sock \
         --volume=/etcd/:/etcd/ \
         -e DOCKER_EC2VAL=${EC2value} \
+        -e DOCKER_AWSREG=${AWS_REGION} \
         --rm \
         digiwhite/etcd:${etcd_version}
       ExecStop=/usr/bin/pkill etcd

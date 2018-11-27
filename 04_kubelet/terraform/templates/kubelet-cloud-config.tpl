@@ -132,7 +132,10 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubelet.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubelet-key.pem \
-            --v=3
+            --node-labels kubernetes.io/role=kubelet \
+            --node-labels kubernetes.io/environment=${environment} \
+            --node-labels kubernetes.io/cluster=${cluster_name} \
+            --v=1
       [Install]
       WantedBy=multi-user.target
 
@@ -203,6 +206,8 @@ write_files:
       current-context: kubelet-context
 
 runcmd:
+  - [ cp, /etc/kubernetes/ssl/ca.pem, /usr/local/share/ca-certificates/ca.crt ]
+  - [ update-ca-certificates, --fresh ]
   - [ systemctl, enable, local-ipv4.service ]
   - [ systemctl, start, local-ipv4.service ]
   - [ systemctl, enable, cni-plugins.service ]
@@ -220,4 +225,4 @@ runcmd:
   - [ systemctl, disable, accounts-daemon ]
   - [ systemctl, stop, accounts-daemon ]  
   - [ systemctl, disable, mdadm ]
-  - [ systemctl, stop, mdadm ] 
+  - [ systemctl, stop, mdadm ]

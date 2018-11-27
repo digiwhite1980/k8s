@@ -50,11 +50,10 @@ data:
         errors
         health
         log stdout
-        kubernetes ${kubedns_domain} in-addr.arpa ip6.arpa {
+        kubernetes ${kubedns_domain} {
           pods verified
-          upstream
-          fallthrough in-addr.arpa ip6.arpa
         }
+        route53 ${route53_domain}.:${route53_zoneid}
         prometheus :9153
         proxy . /etc/resolv.conf
         cache 30
@@ -67,7 +66,7 @@ metadata:
   name: coredns
   namespace: kube-system
   labels:
-    k8s-app: kube-dns
+    k8s-app: coredns
     kubernetes.io/name: "CoreDNS"
 spec:
   replicas: 2
@@ -77,11 +76,11 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: kube-dns
+      k8s-app: coredns
   template:
     metadata:
       labels:
-        k8s-app: kube-dns
+        k8s-app: coredns
     spec:
       serviceAccountName: coredns
       tolerations:
@@ -126,18 +125,18 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-dns
+  name: coredns
   namespace: kube-system
   annotations:
     prometheus.io/port: "9153"
     prometheus.io/scrape: "true"
   labels:
-    k8s-app: kube-dns
+    k8s-app: coredns
     kubernetes.io/cluster-service: "true"
     kubernetes.io/name: "CoreDNS"
 spec:
   selector:
-    k8s-app: kube-dns
+    k8s-app: coredns
   clusterIP: ${cluster_ip_dns}
   ports:
   - name: dns
@@ -145,4 +144,7 @@ spec:
     protocol: UDP
   - name: dns-tcp
     port: 53
+    protocol: TCP
+  - name: metrics
+    port: 9153
     protocol: TCP

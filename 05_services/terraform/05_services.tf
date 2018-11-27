@@ -23,18 +23,70 @@ data "aws_iam_policy_document" "s3default" {
   }
 }
 
-module "s3_docker_registry" {
-  source                     = "../../terraform_modules/s3/"
+# ####################################################################
 
-  bucket                     = "${module.site.project}-${module.site.environment}-registry"
-  s3_policy                  = "${data.aws_iam_policy_document.s3default.json}"
-
-  project                    = "${module.site.project}"
-  environment                = "${module.site.environment}"
+module "ssl_docker_registry_key" {
+  source              = "../../terraform_modules/ssl_private_key"
+  rsa_bits            = 4096
 }
 
-output "s3_docker_registry_arn" {
-  value = "${module.s3_docker_registry.arn}"
+module "ssl_docker_registry_csr" {
+  source              = "../../terraform_modules/ssl_cert_request"
+
+  private_key_pem     = "${module.ssl_docker_registry_key.private_key_pem}"
+
+  common_name         = "*"
+  organization        = "Docker registry" 
+  organizational_unit = "${module.site.project} - ${module.site.environment}"
+  street_address      = [ ]
+  locality            = "Amsterdam"
+  province            = "Noord-Holland"
+  country             = "NL"
+
+  dns_names           = [ "docker-registry",
+                          "docker-registry.${module.site.environment}",
+                          "docker-registry.${module.site.environment}.svc",
+                          "docker-registry.${module.site.environment}.svc.${var.kubernetes["cluster_domain"]}",
+                          "registry",
+                          "registry.${module.site.environment}",
+                          "registry.${module.site.environment}.${module.site.domain_name}",
+                          "127.0.0.1",
+                          "localhost",
+                          "*.${module.site.domain_name}",
+                          "${var.kubernetes["name"]}",
+                          "*.${var.aws_region}.elb.amazonaws.com"
+                        ]
+  ip_addresses          = [ "127.0.0.1" ]
+}
+
+module "ssl_docker_registry_crt" {
+  source                = "../../terraform_modules/ssl_locally_signed_cert"
+
+  cert_request_pem      = "${module.ssl_docker_registry_csr.cert_request_pem}"
+  ca_private_key_pem    = "${module.ssl_ca_key.private_key_pem}"
+  ca_cert_pem           = "${module.ssl_ca_crt.cert_pem}"
+
+  validity_period_hours = "${var.kubernetes["kubeapi_ssl_valid"]}"
+
+  allowed_uses = [
+    "key_encipherment",
+    "server_auth",
+    "client_auth",
+  ]
+}
+
+resource "null_resource" "ssl_docker_registry_key" {
+  triggers {
+    ssl_ca_crt              = "${module.ssl_docker_registry_key.private_key_pem}"
+  }
+  provisioner "local-exec" { command = "cat > ../../config/docker-registry.key <<EOL\n${module.ssl_docker_registry_key.private_key_pem}\nEOL\n" }
+}
+
+resource "null_resource" "ssl_docker_registry_crt" {
+  triggers {
+    ssl_ca_crt              = "${module.ssl_docker_registry_crt.cert_pem}"
+  }
+  provisioner "local-exec" { command = "cat > ../../config/docker-registry.crt <<EOL\n${module.ssl_docker_registry_crt.cert_pem}\nEOL\n" }
 }
 
 # ####################################################################
@@ -51,21 +103,32 @@ data "template_file" "k8s_secrets" {
   template             = "${file("../../deploy/templates/00_secrets.tpl")}"
 
   vars {
+    namespace          = "${module.site.environment}"
     aws_region         = "${base64encode("${var.aws_region}")}"
     aws_access         = "${base64encode("${var.aws_access}")}"
     aws_secret         = "${base64encode("${var.aws_secret}")}"
+    docker-registry-key= "${base64encode("${module.ssl_docker_registry_key.private_key_pem}")}"
+    docker-registry-crt= "${base64encode("${module.ssl_docker_registry_crt.cert_pem}")}"
+    ca-cert            = "${base64encode("${module.ssl_ca_crt.cert_pem}")}"
+    client-cert        = "${base64encode("${module.ssl_kubelet_crt.cert_pem}")}"
+    kubeconfig         = "${base64encode("${data.template_file.kubeconfig.rendered}")}"
   }
 }
 
 data "template_file" "k8s_storageclass" {
   template             = "${file("../../deploy/templates/00_storageclass.tpl")}"
+
+  vars {
+    hdd_class          = "${var.kubernetes["storage_hdd"]}"
+    ssd_class          = "${var.kubernetes["storage_ssd"]}"
+  }
 }
 
 data "template_file" "k8s_kubedns" {
   template             = "${file("../../deploy/templates/01_kubeDNS.tpl")}"
 
   vars {
-    cluster_ip_dns        = "${lookup(local.kubernetes_public, "dns.0")}"
+    cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
     kubedns_version       = "${var.kubernetes["kubedns"]}"
     kubedns_domain        = "${var.kubernetes["cluster_domain"]}"
     kubednsmaq_version    = "${var.kubernetes["kubednsmasq"]}"
@@ -77,32 +140,31 @@ data "template_file" "k8s_coredns" {
   template             = "${file("../../deploy/templates/01_coreDNS.tpl")}"
 
   vars {
-    cluster_ip_dns        = "${lookup(local.kubernetes_public, "dns.0")}"
+    cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
     coredns_version       = "${var.kubernetes["coredns"]}"
     kubedns_domain        = "${var.kubernetes["cluster_domain"]}"
+    route53_domain        = "${module.site.environment}.${var.domainname}"
+    route53_zoneid        = "${module.route53_zone.id}"
   }
 }
 
 data "template_file" "k8s_busybox" {
-  template             = "${file("../../deploy/templates/01_busybox.tpl")}"
+  template                = "${file("../../deploy/templates/01_busybox.tpl")}"
 
   vars {
-    namespace          = "${module.site.environment}"
+    namespace             = "${module.site.environment}"
   }
 }
 
 data "template_file" "k8s_alpine" {
   template             = "${file("../../deploy/templates/01_alpine.tpl")}"
-
-  vars {
-    namespace          = "${module.site.environment}"
-  }
 }
 
 data "template_file" "k8s_dashboard" {
   template             = "${file("../../deploy/templates/02_dashboard.tpl")}"
 
   vars {
+    namespace          = "${var.kubernetes["namespace_sys"]}"
     dashboard_version  = "${var.kubernetes["dashboard"]}"
   }
 }
@@ -111,6 +173,7 @@ data "template_file" "k8s_heapster" {
   template             = "${file("../../deploy/templates/03_heapster.tpl")}"
 
   vars {
+    namespace          = "${var.kubernetes["namespace_sys"]}"
     cluster_domain     = "${var.kubernetes["cluster_domain"]}"
   }
 }
@@ -132,7 +195,7 @@ data "template_file" "k8s_ingress" {
   template             = "${file("../../deploy/templates/06_ingress_backend.tpl")}"
 
   vars {
-    namespace          = "${var.kubernetes["namespace_demo"]}"
+    namespace          = "${module.site.environment}"
   }
 }
 
@@ -140,18 +203,51 @@ data "template_file" "k8s_ingress_demo" {
   template             = "${file("../../deploy/templates/06_ingress_demo.tpl")}"
 
   vars {
-    namespace          = "${var.kubernetes["namespace_demo"]}"
+    domainname         = "${module.site.domain_name}"
+    namespace          = "${module.site.environment}"
   }
+}
+
+#############################################################################################
+module "s3_docker_registry" {
+  source                     = "../../terraform_modules/s3/"
+
+  bucket                     = "${module.site.project}-${module.site.environment}-registry"
+  s3_policy                  = "${data.aws_iam_policy_document.s3default.json}"
+
+  force_destroy              = "true"
+
+  project                    = "${module.site.project}"
+  environment                = "${module.site.environment}"
+}
+
+output "s3_docker_registry_arn" {
+  value = "${module.s3_docker_registry.arn}"
 }
 
 data "template_file" "k8s_docker-registry" {
   template             = "${file("../../deploy/templates/10_docker-registry.tpl")}"
 
   vars {
-    registry_s3_bucket = "${module.s3_docker_registry.bucket}"
-    kubeproxy_version  = "${var.kubernetes["proxy"]}"
+    namespace             = "${module.site.environment}"
+    registry_s3_bucket    = "${module.s3_docker_registry.bucket}"
+    kubeproxy_version     = "${var.kubernetes["proxy"]}"
+    registry_version      = "${var.kubernetes["docker_registry_version"]}"
+    kubernetes_domain     = "${var.kubernetes["cluster_domain"]}"
+    loadbalancer_ip       = "${lookup(local.kubernetes_private, "registry.0")}"
   }
 }
+
+module "route53_record_docker_registry" {
+  source              = "../../terraform_modules/route53_record"
+
+  type                = "A"
+  zone_id             = "${module.route53_zone.id}"
+  name                = "registry.${module.site.environment}.${module.site.domain_name}"
+  records             = [ "${lookup(local.kubernetes_private, "registry.0")}" ]
+}
+
+#############################################################################################
 
 resource "null_resource" "k8s_services" {
   ###############################################################################
@@ -162,9 +258,12 @@ resource "null_resource" "k8s_services" {
   #   #filename = "test-${uuid()}"
   #   elb_controller_dns_name = "${module.elb_kubeapi_internal.dns_name}"
   # }
+  provisioner "local-exec" { command = "kubectl config set-context ${module.site.environment}-${var.kubernetes["name"]} --namespace=${module.site.environment}" }
   provisioner "local-exec" { command = "curl -L -o ../../deploy/k8s/00_weavenet.yaml 'https://cloud.weave.works/k8s/net?k8s-version=${var.kubernetes["k8s"]}'" }
+  provisioner "local-exec" { command = "curl -L -o /usr/bin/linkerd https://github.com/linkerd/linkerd2/releases/download/stable-${var.kubernetes["linkerd"]}/linkerd2-cli-stable-${var.kubernetes["linkerd"]}-linux" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_namespaces.yaml <<EOL\n${data.template_file.k8s_namespaces.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_secrets.yaml <<EOL\n${data.template_file.k8s_secrets.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_storageclass.yaml <<EOL\n${data.template_file.k8s_storageclass.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_kubeDNS.yaml <<EOL\n${data.template_file.k8s_kubedns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_coreDNS.yaml <<EOL\n${data.template_file.k8s_coredns.rendered}\nEOL\n" }
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_busybox.yaml <<EOL\n${data.template_file.k8s_busybox.rendered}\nEOL\n" }
@@ -178,19 +277,23 @@ resource "null_resource" "k8s_services" {
   provisioner "local-exec" { command = "cat > ../../deploy/k8s/10_docker-registry.yaml <<EOL\n${data.template_file.k8s_docker-registry.rendered}\nEOL\n" }
 }
 
+resource "null_resource" "k8s_context" {
+  provisioner "local-exec" { command = "kubectl config set-context ${module.site.environment}-${var.kubernetes["name"]} --namespace=${module.site.environment}" }
+}
+
 resource "null_resource" "k8s_cni" {
   ################################################################################
   # In order for Kubernetes to work properly we need to deploy the overlany / cni
   # network. In this repo we chose for Weavenet.
   # We also depend on kubectl (we expect it to be avialable within your path)
   ################################################################################
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_namespaces.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_weavenet.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_secrets.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/00_storageclass.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/01_coreDNS.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig create -f ../../deploy/k8s/02_dashboard.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig config set-context ${module.site.enbironment}" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_namespaces.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_weavenet.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_secrets.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_storageclass.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/01_coreDNS.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/02_dashboard.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/10_docker-registry.yaml; true" }
 
   triggers = {
     provisioner = "${null_resource.k8s_services.id}"

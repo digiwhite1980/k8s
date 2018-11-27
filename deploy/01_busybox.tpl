@@ -18,3 +18,17 @@ spec:
         imagePullPolicy: IfNotPresent
         name: busybox
       restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: busybox
+  namespace: ${namespace}
+  labels:
+    k8s-app: busybox
+spec:
+  selector:
+    k8s-app: busybox
+  ports:
+  - port: 80
+    targetPort: 80

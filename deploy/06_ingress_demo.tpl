@@ -55,7 +55,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-  - host: demo.example.local
+  - host: nginx.${domainname}
     http:
       paths:
         - path: /

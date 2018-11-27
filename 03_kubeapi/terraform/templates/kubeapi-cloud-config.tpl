@@ -91,13 +91,14 @@ write_files:
         --volume=/etc/ssl/certs:/etc/ssl/certs \
         gcr.io/google-containers/hyperkube:${kubernetes_version} \
           kube-apiserver \
-          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,PersistentVolumeLabel,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,PVCProtection \
-          --authorization-mode=AlwaysAllow \
+          --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota,DenyExecOnPrivileged,DenyEscalatingExec,Initializers,NodeRestriction,PVCProtection \
+          --authorization-mode=Node,RBAC \
           --feature-gates=RotateKubeletClientCertificate=true,RotateKubeletServerCertificate=true \
           --cloud-provider=aws \
           --allow-privileged=true \
           --audit-log-format=json \
           --bind-address=0.0.0.0 \
+          --profiling=false \
           --client-ca-file=/etc/kubernetes/ssl/ca.pem \
           --enable-swagger-ui=true \
           --etcd-servers=${etcd_endpoint} \
@@ -114,7 +115,7 @@ write_files:
           --tls-ca-file=/etc/kubernetes/ssl/ca.pem \
           --tls-cert-file=/etc/kubernetes/ssl/kubeapi.pem \
           --tls-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-          --v=3 \
+          --v=1 \
       Restart=on-failure
       RestartSec=5
       [Install]
@@ -167,7 +168,10 @@ write_files:
             --register-schedulable=true \
             --tls-cert-file=/etc/kubernetes/ssl/kubeapi.pem \
             --tls-private-key-file=/etc/kubernetes/ssl/kubeapi-key.pem \
-            --v=4
+            --node-labels kubernetes.io/role=kubeapi \
+            --node-labels kubernetes.io/environment=${environment} \
+            --node-labels kubernetes.io/cluster=${cluster_name} \
+            --v=1
       [Install]
       WantedBy=multi-user.target
 
@@ -264,6 +268,8 @@ write_files:
       {"apiVersion":"abac.authorization.kubernetes.io/v1beta1","kind":"Policy","spec":{"user":"system:serviceaccount:kube-system:default","namespace":"*","resource":"*","apiGroup":"*"}}
 
 runcmd:
+  - [ cp, /etc/kubernetes/ssl/ca.pem, /usr/local/share/ca-certificates/ca.crt ]
+  - [ update-ca-certificates, --fresh ]
   - [ systemctl, enable, local-ipv4.service ]
   - [ systemctl, start, local-ipv4.service ]
   - [ systemctl, enable, docker-tls-tcp.socket ]
@@ -287,4 +293,4 @@ runcmd:
   - [ systemctl, disable, accounts-daemon ]
   - [ systemctl, stop, accounts-daemon ] 
   - [ systemctl, disable, mdadm ]
-  - [ systemctl, stop, mdadm ] 
+  - [ systemctl, stop, mdadm ]

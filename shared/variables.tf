@@ -50,13 +50,15 @@ locals  {
   }
 
   kubernetes_public {
-    api.0  = "${var.cidr_vpc_prefix}.110.1"
-    dns.0  = "${var.cidr_vpc_prefix}.110.5"
+    api.0       = "${var.cidr_vpc_prefix}.110.1"
+    dns.0       = "${var.cidr_vpc_prefix}.110.5"
+    registry.0  = "${var.cidr_vpc_prefix}.110.10"
   }
 
   kubernetes_private {
-    api.0  = "${var.cidr_vpc_prefix}.210.1"
-    dns.0  = "${var.cidr_vpc_prefix}.210.5"
+    api.0       = "${var.cidr_vpc_prefix}.210.1"
+    dns.0       = "${var.cidr_vpc_prefix}.210.5"
+    registry.0  = "${var.cidr_vpc_prefix}.210.10"
   }
 }
 
@@ -95,32 +97,38 @@ variable "instance" {
     default          = "t2.micro"
     etcd             = "t2.medium"
     kubeapi          = "t2.medium"
-    kubelet          = "t2.large"
+    kubelet          = "t3.xlarge"
   }
 }
 
 variable "instance_count" {
   default = {
-    etcd             = 2
-    etcd_min         = 2
+    etcd             = 3
+    etcd_min         = 3
     kubeapi          = 1
     kubeapi_min      = 1
     kubelet          = 3
     kubelet_min      = 3
+    bastion          = 1
   }
 }
 
 variable "instance_spot_price" {
   default = {
-    kubelet         = "1.0"
-    etcd            = "1.0"
+    kubelet         = "4.0"
+    etcd            = "2.0"
+    bastion         = "2.0"
   }
 }
 
 variable "kubernetes" {
   default = {
     ##########################################
-    # SSL Validity = 1 year (8544 hours)
+    # Whitelist addresses
+    ##########################################
+	  whitelist			    = "212.41.134.180/32"
+    ##########################################
+    # SSL Validity 	  = 1 year (8544 hours)
     ##########################################
     ca_ssl_valid      = "8644"
     etcd_ssl_valid    = "8644"
@@ -139,12 +147,21 @@ variable "kubernetes" {
     kubednsmasq       = "1.4"
     exechealthz       = "1.2"
     #########################################
-    dashboard         = "v1.8.3"
+    dashboard         = "v1.10.0"
     state-metrics     = "v1.3.1"
     addon-resizer     = "1.7"
+    #########################################
+    linkerd           = "2.0.0"
+
+    storage_hdd       = "hdd-cold"
+    storage_ssd       = "ssd"
+
+    docker_registry_version = "2.6.2"
+    docker_registry_size    = "100Gi"
 
     cluster_domain    = "cluster.local"
 
     namespace_demo    = "kube-public"
+    namespace_sys     = "kube-system"
   }
 }

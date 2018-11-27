@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: docker-registry
-  namespace: infrastructure
+  namespace: ${namespace}
   labels:
     app: docker-registry
     component: deployment
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: registry
-        image: registry:2.5
+        image: registry:${registry_version}
         imagePullPolicy: Always
         resources:
           # keep request = limit to keep this container in guaranteed class
@@ -46,6 +46,10 @@ spec:
             secretKeyRef:
               name: aws-credentials
               key: aws_region
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: "/etc/ssl/cert/docker-registry.pem"
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: "/etc/ssl/key/docker-registry.key"
         - name: REGISTRY_STORAGE_S3_BUCKET
           value: "${registry_s3_bucket}"
         - name: REGISTRY_STORAGE_S3_ROOTDIRECTORY
@@ -58,59 +62,80 @@ spec:
           value: "100"
         - name: REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE
           value: "33554432"
+        - name: REGISTRY_STORAGE_DELETE_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: registry-certificate
+          mountPath: "/etc/ssl/cert"
+          readOnly: true
+        - name: registry-key
+          mountPath: "/etc/ssl/key"
+          readOnly: true
+        - name: registry-ca
+          mountPath: "/etc/ssl/ca"
+          readOnly: true                  
         ports:
         - containerPort: 5000
           name: registry
           protocol: TCP
----
-apiVersion: extensions/v1beta1
-kind: DaemonSet
-metadata:
-  name: docker-registry
-  namespace: infrastructure
-  labels:
-    app: docker-registry
-    component: proxy
-spec:
-  template:
-    metadata:
-      labels:
-        app: docker-registry-proxy
-        component: proxy
-    spec:
-      containers:
-      - name: docker-registry-proxy
-        image: gcr.io/google_containers/kube-registry-proxy:${kubeproxy_version}
-        resources:
-          limits:
-            cpu: 100m
-            memory: 50Mi
-        env:
-        - name: REGISTRY_HOST
-          value: docker-registry.infrastructure.svc
-        - name: REGISTRY_PORT
-          value: "5000"
-        - name: FORWARD_PORT
-          value: "5000"
-        ports:
-        - name: docker-registry
-          containerPort: 5000
-          hostPort: 5000
+      volumes:
+      - name: registry-certificate
+        secret: 
+          secretName: ssl-docker-registry
+          items:
+          - key: certificate
+            path: docker-registry.pem 
+      - name: registry-key
+        secret: 
+          secretName: ssl-docker-registry
+          items:
+          - key: key 
+            path: docker-registry.key          
+      - name: registry-ca
+        secret: 
+          secretName: ssl-ca
+          items:
+          - key: certificate
+            path: ca.pem
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: docker-registry
-  namespace: infrastructure
+  namespace: ${namespace}
   labels:
     app: docker-registry
     component: deployment
 spec:
-  type: NodePort
   ports:
   - name: docker-registry
     port: 5000
     protocol: TCP
+    targetPort: 5000
   selector:
     app: docker-registry
     component: deployment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+  labels:
+    app: docker-registry
+    component: deployment
+  name: docker-registry-lb
+  namespace: ${namespace}
+spec:
+  ports:
+  - name: docker-registry
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: docker-registry
+    component: deployment
+  sessionAffinity: None
+  type: LoadBalancer
+  clusterIP: ${loadbalancer_ip}
