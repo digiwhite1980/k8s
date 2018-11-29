@@ -182,7 +182,7 @@ CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
 CONFIG_DIR=${CURRENT_FOLDER}/config
 CONFIG_FLAGS=${CONFIG_DIR}/run.flags
-DEPLOY_DIR=${CURRENT_FOLDER}/deploy/k8s
+DEPLOY_DIR=${CURRENT_FOLDER}/deploy
 CONFIG_FILE=${CONFIG_DIR}/run.conf
 
 ##################################################################################################################
