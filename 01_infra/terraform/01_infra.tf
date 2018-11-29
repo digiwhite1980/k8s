@@ -317,7 +317,6 @@ data "template_file" "machine_default" {
   template             = "${file("../../01_infra/terraform/templates/template_machine_role.tpl")}"
 }
 
-
 data "template_file" "autoscaling_default" {
   template             = "${file("../../01_infra/terraform/templates/template_machine_role_autoscaling.tpl")}"
 }
