@@ -4,6 +4,7 @@ terraform_state/*tfstate*
 shared/aws_credentials.tf
 shared/ssh*
 deploy/k8s/*
+06_custom/*
 config/*
 *.tfstate
 *.tfstate.backup
