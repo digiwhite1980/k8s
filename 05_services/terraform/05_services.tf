@@ -92,7 +92,7 @@ resource "null_resource" "ssl_docker_registry_crt" {
 # ####################################################################
 
 data "template_file" "k8s_namespaces" {
-  template             = "${file("../../deploy/templates/00_namespaces.tpl")}"
+  template             = "${file("templates/00_namespaces.tpl")}"
 
   vars {
     environment        = "${module.site.environment}"
@@ -100,7 +100,7 @@ data "template_file" "k8s_namespaces" {
 }
 
 data "template_file" "k8s_secrets" {
-  template             = "${file("../../deploy/templates/00_secrets.tpl")}"
+  template             = "${file("templates/00_secrets.tpl")}"
 
   vars {
     namespace          = "${module.site.environment}"
@@ -116,7 +116,7 @@ data "template_file" "k8s_secrets" {
 }
 
 data "template_file" "k8s_storageclass" {
-  template             = "${file("../../deploy/templates/00_storageclass.tpl")}"
+  template             = "${file("templates/00_storageclass.tpl")}"
 
   vars {
     hdd_class          = "${var.kubernetes["storage_hdd"]}"
@@ -125,7 +125,7 @@ data "template_file" "k8s_storageclass" {
 }
 
 data "template_file" "k8s_kubedns" {
-  template             = "${file("../../deploy/templates/01_kubeDNS.tpl")}"
+  template             = "${file("templates/01_kubeDNS.tpl")}"
 
   vars {
     cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
@@ -137,7 +137,7 @@ data "template_file" "k8s_kubedns" {
 }
 
 data "template_file" "k8s_coredns" {
-  template             = "${file("../../deploy/templates/01_coreDNS.tpl")}"
+  template             = "${file("templates/01_coreDNS.tpl")}"
 
   vars {
     cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
@@ -149,7 +149,7 @@ data "template_file" "k8s_coredns" {
 }
 
 data "template_file" "k8s_busybox" {
-  template                = "${file("../../deploy/templates/01_busybox.tpl")}"
+  template                = "${file("templates/01_busybox.tpl")}"
 
   vars {
     namespace             = "${module.site.environment}"
@@ -157,11 +157,11 @@ data "template_file" "k8s_busybox" {
 }
 
 data "template_file" "k8s_alpine" {
-  template             = "${file("../../deploy/templates/01_alpine.tpl")}"
+  template             = "${file("templates/01_alpine.tpl")}"
 }
 
 data "template_file" "k8s_dashboard" {
-  template             = "${file("../../deploy/templates/02_dashboard.tpl")}"
+  template             = "${file("templates/02_dashboard.tpl")}"
 
   vars {
     namespace          = "${var.kubernetes["namespace_sys"]}"
@@ -170,7 +170,7 @@ data "template_file" "k8s_dashboard" {
 }
 
 data "template_file" "k8s_heapster" {
-  template             = "${file("../../deploy/templates/03_heapster.tpl")}"
+  template             = "${file("templates/03_heapster.tpl")}"
 
   vars {
     namespace          = "${var.kubernetes["namespace_sys"]}"
@@ -179,11 +179,11 @@ data "template_file" "k8s_heapster" {
 }
 
 data "template_file" "k8s_influxdb" {
-  template             = "${file("../../deploy/templates/03_influxdb.tpl")}"
+  template             = "${file("templates/03_influxdb.tpl")}"
 }
 
 data "template_file" "k8s_state-metrics" {
-  template             = "${file("../../deploy/templates/05_kube-state-metrics.tpl")}"
+  template             = "${file("templates/05_kube-state-metrics.tpl")}"
 
   vars {
     statemetrics_version = "${var.kubernetes["state-metrics"]}"
@@ -192,7 +192,7 @@ data "template_file" "k8s_state-metrics" {
 }
 
 data "template_file" "k8s_ingress" {
-  template             = "${file("../../deploy/templates/06_ingress_backend.tpl")}"
+  template             = "${file("templates/06_ingress_backend.tpl")}"
 
   vars {
     namespace          = "${module.site.environment}"
@@ -200,7 +200,7 @@ data "template_file" "k8s_ingress" {
 }
 
 data "template_file" "k8s_ingress_demo" {
-  template             = "${file("../../deploy/templates/06_ingress_demo.tpl")}"
+  template             = "${file("templates/06_ingress_demo.tpl")}"
 
   vars {
     domainname         = "${module.site.domain_name}"
@@ -226,7 +226,7 @@ output "s3_docker_registry_arn" {
 }
 
 data "template_file" "k8s_docker-registry" {
-  template             = "${file("../../deploy/templates/10_docker-registry.tpl")}"
+  template             = "${file("templates/10_docker-registry.tpl")}"
 
   vars {
     namespace             = "${module.site.environment}"
@@ -259,22 +259,22 @@ resource "null_resource" "k8s_services" {
   #   elb_controller_dns_name = "${module.elb_kubeapi_internal.dns_name}"
   # }
   provisioner "local-exec" { command = "kubectl config set-context ${module.site.environment}-${var.kubernetes["name"]} --namespace=${module.site.environment}" }
-  provisioner "local-exec" { command = "curl -L -o ../../deploy/k8s/00_weavenet.yaml 'https://cloud.weave.works/k8s/net?k8s-version=${var.kubernetes["k8s"]}'" }
+  provisioner "local-exec" { command = "curl -L -o ../../deploy/00_weavenet.yaml 'https://cloud.weave.works/k8s/net?k8s-version=${var.kubernetes["k8s"]}'" }
   provisioner "local-exec" { command = "curl -L -o /usr/bin/linkerd https://github.com/linkerd/linkerd2/releases/download/stable-${var.kubernetes["linkerd"]}/linkerd2-cli-stable-${var.kubernetes["linkerd"]}-linux" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_namespaces.yaml <<EOL\n${data.template_file.k8s_namespaces.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_secrets.yaml <<EOL\n${data.template_file.k8s_secrets.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/00_storageclass.yaml <<EOL\n${data.template_file.k8s_storageclass.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_kubeDNS.yaml <<EOL\n${data.template_file.k8s_kubedns.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_coreDNS.yaml <<EOL\n${data.template_file.k8s_coredns.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_busybox.yaml <<EOL\n${data.template_file.k8s_busybox.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/01_alpine.yaml <<EOL\n${data.template_file.k8s_alpine.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/02_dashboard.yaml <<EOL\n${data.template_file.k8s_dashboard.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_heapster.yaml <<EOL\n${data.template_file.k8s_heapster.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/03_influxdb.yaml <<EOL\n${data.template_file.k8s_influxdb.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/05_kube-state-metrics.yaml <<EOL\n${data.template_file.k8s_state-metrics.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/06_ingress_backend.yaml <<EOL\n${data.template_file.k8s_ingress.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/06_ingress_demo.yaml <<EOL\n${data.template_file.k8s_ingress_demo.rendered}\nEOL\n" }
-  provisioner "local-exec" { command = "cat > ../../deploy/k8s/10_docker-registry.yaml <<EOL\n${data.template_file.k8s_docker-registry.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/00_namespaces.yaml <<EOL\n${data.template_file.k8s_namespaces.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/00_secrets.yaml <<EOL\n${data.template_file.k8s_secrets.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/00_storageclass.yaml <<EOL\n${data.template_file.k8s_storageclass.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/01_kubeDNS.yaml <<EOL\n${data.template_file.k8s_kubedns.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/01_coreDNS.yaml <<EOL\n${data.template_file.k8s_coredns.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/01_busybox.yaml <<EOL\n${data.template_file.k8s_busybox.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/01_alpine.yaml <<EOL\n${data.template_file.k8s_alpine.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/02_dashboard.yaml <<EOL\n${data.template_file.k8s_dashboard.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/03_heapster.yaml <<EOL\n${data.template_file.k8s_heapster.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/03_influxdb.yaml <<EOL\n${data.template_file.k8s_influxdb.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/05_kube-state-metrics.yaml <<EOL\n${data.template_file.k8s_state-metrics.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/06_ingress_backend.yaml <<EOL\n${data.template_file.k8s_ingress.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/06_ingress_demo.yaml <<EOL\n${data.template_file.k8s_ingress_demo.rendered}\nEOL\n" }
+  provisioner "local-exec" { command = "cat > ../../deploy/10_docker-registry.yaml <<EOL\n${data.template_file.k8s_docker-registry.rendered}\nEOL\n" }
 }
 
 resource "null_resource" "k8s_context" {
@@ -287,13 +287,13 @@ resource "null_resource" "k8s_cni" {
   # network. In this repo we chose for Weavenet.
   # We also depend on kubectl (we expect it to be avialable within your path)
   ################################################################################
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_namespaces.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_weavenet.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_secrets.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/00_storageclass.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/01_coreDNS.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/02_dashboard.yaml; true" }
-  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/k8s/10_docker-registry.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/00_namespaces.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/00_weavenet.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/00_secrets.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/00_storageclass.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/01_coreDNS.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/02_dashboard.yaml; true" }
+  provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f ../../deploy/10_docker-registry.yaml; true" }
 
   triggers = {
     provisioner = "${null_resource.k8s_services.id}"
