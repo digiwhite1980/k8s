@@ -49,7 +49,7 @@ cat <<_EOF_
   $1
 
   Usage: ${0} -E <environment> [-n <CIDR prefix x.x>] <Option> 
-              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X]
+              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C]
 
   -E   * Environment 
   -r   {Region | AWS)
@@ -59,6 +59,7 @@ cat <<_EOF_
   -R   restore kubectl config and kubectl binary
   -o   Show terraform output
   -X   [ only with -D ] dont run deletion of custom service scripts
+  -C   Create 06_custom 
   
   Options *:
   -i   Run infra
@@ -71,6 +72,7 @@ cat <<_EOF_
 
   -t   Taint services and apply again (only to use with -s or -c)
 
+  -C   Create custom folder environment voor custom terraform and kubernetes files (06_custom)
   -D   Run destroy terraform 
   -d   Run destroy terraform (but only custom services)
 
@@ -80,7 +82,7 @@ _EOF_
 }
 
 
-while getopts ":eiaskhyRtcADXdor:E:n:l:" opt; do
+while getopts ":eiaskhyRtcCADXdor:E:n:l:" opt; do
 	case $opt in
 		h)
 			usage
@@ -112,6 +114,10 @@ while getopts ":eiaskhyRtcADXdor:E:n:l:" opt; do
 			;;
 		r)
 			AWS_REGION=${OPTARG}
+			;;
+		C)
+			CREATE_CUSTOM=1
+			EXEC=1
 			;;
 		D)
 			DESTROY=1
@@ -169,6 +175,8 @@ DESTROY=${DESTROY:-0}
 OUTPUT=${OUTPUT:-0}
 TAINT=${TAINT:-0}
 RESTORE_KUBECTL=${RESTORE_KUBECTL:-0}
+CREATE_CUSTOM=${CREATE_CUSTOM:-0}
+CUSTOM_FOLDER="06_custom"
 
 CURRENT_FOLDER=$(pwd)
 TERRAFORM_STATE=${CURRENT_FOLDER}/terraform_state
@@ -180,21 +188,25 @@ CONFIG_FILE=${CONFIG_DIR}/run.conf
 ##################################################################################################################
 # Generic checks
 ##################################################################################################################
-[[ ! -x $(basename ${0}) ]] 		&& log 3 "Please execute $(basename ${0}) from local directory (./run.sh)"
+[[ ! -x $(basename ${0}) ]] 				&& log 3 "Please execute $(basename ${0}) from local directory (./run.sh)"
 [[ ! -f shared/aws_credentials.tf ]] 	&& usage "File shared/aws_credentials.tf not found. Please see README.md"
-[[ "${ENVIRONMENT}" == "" ]] 		&& usage "No environment (-E) set"
-[[ ${EXEC} -ne 1 ]] 			&& usage "No action selected"
+[[ "${ENVIRONMENT}" == "" ]] 				&& usage "No environment (-E) set"
+[[ ${EXEC} -ne 1 ]] 							&& usage "No action selected"
 
 clear
 binCheck git terraform
 
 [[ ! -f terraform_modules/.git ]] 	&& rm -fr terraform_modules > /dev/null 2>&1
 git submodule add --force  https://github.com/digiwhite1980/terraform.git terraform_modules > /dev/null
-[[ $? -ne 0 ]]	 			&& log 3 "Failed to initialize submodules"
+[[ $? -ne 0 ]]	 							&& log 3 "Failed to initialize submodules"
 
 FLAGS="-var env=${ENVIRONMENT}"
 [[ "${CIDR_PREFIX}" != "" ]] 		&& FLAGS="${FLAGS} -var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${AWS_REGION}" != "" ]] 		&& FLAGS="${FLAGS} -var aws_region=${AWS_REGION}"
+
+[[ ! -d ${TERRAFORM_STATE} ]]	&& mkdir ${TERRAFORM_STATE}
+[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
+[[ ! -d ${DEPLOY_DIR} ]] 		&& mkdir ${DEPLOY_DIR}
 
 if [ -s "${CONFIG_FLAGS}" ]; then
 	. ${CONFIG_FLAGS}
@@ -207,10 +219,20 @@ else
 	echo "FLAGS=\"${FLAGS}\"" > ${CONFIG_FLAGS}
 fi
 
-[[ ! -d ${TERRAFORM_STATE} ]] 		&& mkdir ${TERRAFORM_STATE}
-[[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
-[[ ! -d ${DEPLOY_DIR} ]] 		&& mkdir ${DEPLOY_DIR}
+if [ ${CREATE_CUSTOM} -eq 1 ]; then
+	[[ ! -d ${CUSTOM_FOLDER} ]] && mkdir -p ${CUSTOM_FOLDER}/terraform
+	log 1 "Creating custom ${CUSTOM_FOLDER} environment"
+	for FOLDER in $(ls -1d 0* | grep -v ${CUSTOM_FOLDER})
+	do
+		[[ ! -L ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf ]] && ln -s ../../${FOLDER}/terraform/${FOLDER}.tf ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf
+	done
 
+	[[ ! -L ${CUSTOM_FOLDER}/terraform/aws_credentials.tf ]] && ln -s ../../shared/aws_credentials.tf ${CUSTOM_FOLDER}/terraform/aws_credentials.tf
+	[[ ! -L ${CUSTOM_FOLDER}/terraform/terraform.tfstate ]] && ln -s ../../terraform_state/terraform.tfstate ${CUSTOM_FOLDER}/terraform/terraform.tfstate
+	[[ ! -L ${CUSTOM_FOLDER}/terraform/terraform.tfstate.backup ]] && ln -s ../../terraform_state/terraform.tfstate.backup ${CUSTOM_FOLDER}/terraform/terraform.tfstate.backup
+	[[ ! -L ${CUSTOM_FOLDER}/terraform/variables.tf ]] && ln -s ../../shared/variables.tf ${CUSTOM_FOLDER}/terraform/variables.tf
+fi
+	
 ########################################################################################
 # The possible configuration options which are specified will be saved if not set
 ########################################################################################
@@ -290,8 +312,8 @@ if [ ${SERVICES} -eq 1 -a ${ALL} -ne 1 ]; then
 fi
 
 if [ ${CUSTOM} -eq 1 -o ${ALL} -eq 1 ]; then
-	[[ ! -d "06_custom" ]] && log 3 "Unable to find custom folder for option -s"
-	cd 06_custom/terraform
+	[[ ! -d ${CUSTOM_FOLDER} ]] && log 3 "Unable to find custom folder for option -c"
+	cd ${CUSTOM_FOLDER}/terraform
 	log 1 "Executing terraform init custom"
 	createTfstate
 	terraform init > /dev/null

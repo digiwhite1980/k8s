@@ -34,7 +34,7 @@ The following switches are available.
   No environment (-E) set
 
   Usage: ./run.sh -E <environment> [-n <CIDR prefix x.x>] <Option>
-              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X]
+              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C]
 
   -E   * Environment
   -r   {Region | AWS)
@@ -56,6 +56,7 @@ The following switches are available.
 
   -t   Taint services and apply again (only to use with -s or -c)
 
+  -C   Create custom folder environment voor custom terraform and kubernetes files (06_custom)
   -D   Run destroy terraform
   -d   Run destroy terraform (but only custom services)
 

@@ -78,10 +78,14 @@ module "kubelet_launch_configuration" {
   image_id             = "${data.aws_ami.ubuntu_ami.id}"
   instance_type        = "${var.instance["kubelet"]}"
   iam_instance_profile = "${module.iam_instance_profile.name}"
+<<<<<<< HEAD
   #####################################################################################
   #Disable this line if on-demand instances are needed / to be used
   #####################################################################################
   #spot_price           = "${var.instance_spot_price["kubelet"]}"
+=======
+  spot_price           = "${var.instance_spot_price["kubelet"]}"
+>>>>>>> dc98c1284ec5acff72f3d9f304ff5ada35fdc8d0
 
   key_name             = "${module.key_pair.ssh_name_key}"
 
@@ -184,6 +188,7 @@ resource "null_resource" "wait_for_kubeapi" {
 
 resource "null_resource" "kubelet-rolebindings-apply" {
 
+<<<<<<< HEAD
   provisioner "local-exec" { command = "kubectl --kubeconfig ../../config/kubeconfig apply -f - <<EOL\n${data.template_file.kubelet-rolebindings.rendered}\nEOL\n" }
   # kubectl create clusterrolebinding kubelet --clusterrole=system:node --user=kubelet
   # kubectl create clusterrolebinding kubelet-proxy --clusterrole=system:node-proxier --user=kubelet
@@ -191,3 +196,8 @@ resource "null_resource" "kubelet-rolebindings-apply" {
     provisioner = "${null_resource.wait_for_kubeapi.id}"
   }
 }
+=======
+# output "kubelet_public_dns" {
+#   value = "${module.instance_kubelet.public_dns}"
+# }
+>>>>>>> dc98c1284ec5acff72f3d9f304ff5ada35fdc8d0
