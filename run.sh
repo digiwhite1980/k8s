@@ -28,6 +28,23 @@ function binCheck {
 	done
 }
 
+function toggleEnv {
+	if [ -f ${1}/terraform/${1}.tf.disabled ]; then
+		log 1 "Enable run environment ${1}"
+		for file in $(find ${1}/terraform/ -maxdepth 1 -name *.tf.disabled)
+		do
+			org_file=$(echo ${file} | sed 's/\.disabled//g')
+			mv ${file} ${org_file}
+		done
+	else
+		log 1 "Disable run environment ${1}"
+		for file in $(find ${1}/terraform/ -maxdepth 1 -name *.tf)
+		do
+			mv ${file} ${file}.disabled
+		done
+	fi
+}
+
 function createTfstate {
 
 	##################################################################
@@ -48,8 +65,8 @@ cat <<_EOF_
 
   $1
 
-  Usage: ${0} -E <environment> [-F domain] [-n <CIDR prefix x.x>] <Option> 
-              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C]
+  Usage: ${0} -E <environment> [-F domain] [-n <CIDR prefix x.x>] <Options *> 
+              [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C] [-x {2..6}]
 
   Help:
   -h   This help
@@ -61,18 +78,21 @@ cat <<_EOF_
   -n   CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
   -y   auto-approve terraform
   -R   restore kubectl config and kubectl binary
+  -f   Overwrite flags with new given flags
   -o   Show terraform output
   
-  Options *:
-  -i   Run infra
-  -e   Run ETCD terraform
-  -a   Run Kubernetes API server terraform
-  -k   Run Kubernetes Kubelete terraform
-  -s   Run services
-  -c   Run services custom (if made availablei: see -C)
+  Options *: 
+  -i   (1) Run infra
+  -e   (2) Run ETCD terraform
+  -a   (3) Run Kubernetes API server terraform
+  -k   (4) Run Kubernetes Kubelete terraform
+  -s   (5) Run services
+  -c   (6) Run services custom (if made availablei: see -C)
   -A   Run All terraform 
 
   -t   Taint services and apply again (only to use with -s or -c)
+  -x   Disable Option ([2,3,4,5,6,s] comma seperated). Disabled Run environment. Can be used when not installing Kubernetes but only create custom environment. 
+       The option s shows all disabled services
 
   Destroy:
   -C   Create custom folder environment voor custom terraform and kubernetes files (06_custom)
@@ -80,13 +100,13 @@ cat <<_EOF_
   -X   [ only with -D ] dont run deletion of custom service scripts
   -d   Run destroy terraform (but only custom services)
 
-   *   switches are mandatory
+   *   switches are mandatory. Running a higher option will invoke all lower options.
 _EOF_
 	[[ "${1}" != "" ]] && exit 1
 }
 
 
-while getopts ":eiaskhyRtcCADXdor:E:n:l:F:" opt; do
+while getopts ":eiaskfhyRtcCADXdox:r:E:n:l:F:" opt; do
 	case $opt in
 		h)
 			usage
@@ -155,6 +175,13 @@ while getopts ":eiaskhyRtcCADXdor:E:n:l:F:" opt; do
 		t)
 			TAINT=1
 			;;
+		x)
+			DISABLE_RUN=${OPTARG}
+			EXEC=1
+			;;
+		f)
+			OVERWRITE_FLAGS=1
+			;;
 		y)
 			AUTO="-auto-approve"
 			;;
@@ -182,6 +209,7 @@ DESTROY=${DESTROY:-0}
 OUTPUT=${OUTPUT:-0}
 TAINT=${TAINT:-0}
 RESTORE_KUBECTL=${RESTORE_KUBECTL:-0}
+OVERWRITE_FLAGS=${OVERWRITE_FLAGS:-0}
 CREATE_CUSTOM=${CREATE_CUSTOM:-0}
 CUSTOM_FOLDER="06_custom"
 
@@ -216,6 +244,8 @@ FLAGS="-var env=${ENVIRONMENT}"
 [[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
 [[ ! -d ${DEPLOY_DIR} ]] 		&& mkdir ${DEPLOY_DIR}
 
+[[ ${OVERWRITE_FLAGS} -eq 1 ]] && rm ${CONFIG_FLAGS}
+
 if [ -s "${CONFIG_FLAGS}" ]; then
 	. ${CONFIG_FLAGS}
 	#########################################################################################################
@@ -239,6 +269,45 @@ if [ ${CREATE_CUSTOM} -eq 1 ]; then
 	[[ ! -L ${CUSTOM_FOLDER}/terraform/terraform.tfstate ]] && ln -s ../../terraform_state/terraform.tfstate ${CUSTOM_FOLDER}/terraform/terraform.tfstate
 	[[ ! -L ${CUSTOM_FOLDER}/terraform/terraform.tfstate.backup ]] && ln -s ../../terraform_state/terraform.tfstate.backup ${CUSTOM_FOLDER}/terraform/terraform.tfstate.backup
 	[[ ! -L ${CUSTOM_FOLDER}/terraform/variables.tf ]] && ln -s ../../shared/variables.tf ${CUSTOM_FOLDER}/terraform/variables.tf
+fi
+
+########################################################################################
+# Disable run envrionemnt if -x is specified
+########################################################################################
+
+if [ "${DISABLE_RUN}" != "" ]; then
+	for RUN in $(echo ${DISABLE_RUN} | tr "," " ")
+	do
+		case ${RUN} in
+			2)
+				toggleEnv 02_etcd
+				;;
+			3)
+				toggleEnv 03_kubeapi
+				;;
+			4)
+				toggleEnv 04_kubelet
+				;;
+			5)
+				toggleEnv 05_services
+				;;
+			6)
+				toggleEnv 06_custom
+				;;
+			s)
+				for run in $(ls -1d 0*)
+				do
+					if [ -f ${run}/terraform/${run}.tf.disabled ]; then
+						log 1 "Envirionment ${run} DISABLED"
+					else
+						log 1 "Environment ${run} ENABLED"
+					fi
+				done
+				;;
+			*)
+				;;
+		esac
+	done
 fi
 	
 ########################################################################################
