@@ -3,10 +3,10 @@
 DIR=$(pwd)
 NAME=$(basename ${DIR})
 
-RUNNING=$(docker ps | grep ${NAME} > /dev/null 2>&1; echo $?)
+RUNNING=$(docker ps -a | grep ${NAME} > /dev/null 2>&1; echo $?)
 
 if [ ${RUNNING} -eq 1 ]; then
-	docker run -ti --name ${NAME} -v ${DIR}../:/data --entrypoint=/bin/sh hashicorp/terraform:0.11.7
+	docker run -ti --name ${NAME} -v ${DIR}/../:/data --entrypoint=/bin/sh hashicorp/terraform:0.11.7
 else
 	docker start ${NAME}
 	docker attach ${NAME}
