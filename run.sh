@@ -48,18 +48,20 @@ cat <<_EOF_
 
   $1
 
-  Usage: ${0} -E <environment> [-n <CIDR prefix x.x>] <Option> 
+  Usage: ${0} -E <environment> [-F domain] [-n <CIDR prefix x.x>] <Option> 
               [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C]
 
+  Help:
+  -h   This help
+
+  General:
   -E   * Environment 
+  -F   Domain (default: example.internal)
   -r   {Region | AWS)
   -n   CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
-  -h   This help
   -y   auto-approve terraform
   -R   restore kubectl config and kubectl binary
   -o   Show terraform output
-  -X   [ only with -D ] dont run deletion of custom service scripts
-  -C   Create 06_custom 
   
   Options *:
   -i   Run infra
@@ -67,13 +69,15 @@ cat <<_EOF_
   -a   Run Kubernetes API server terraform
   -k   Run Kubernetes Kubelete terraform
   -s   Run services
-  -c   Run services custom (if made available)
+  -c   Run services custom (if made availablei: see -C)
   -A   Run All terraform 
 
   -t   Taint services and apply again (only to use with -s or -c)
 
+  Destroy:
   -C   Create custom folder environment voor custom terraform and kubernetes files (06_custom)
   -D   Run destroy terraform 
+  -X   [ only with -D ] dont run deletion of custom service scripts
   -d   Run destroy terraform (but only custom services)
 
    *   switches are mandatory
@@ -82,7 +86,7 @@ _EOF_
 }
 
 
-while getopts ":eiaskhyRtcCADXdor:E:n:l:" opt; do
+while getopts ":eiaskhyRtcCADXdor:E:n:l:F:" opt; do
 	case $opt in
 		h)
 			usage
@@ -137,6 +141,9 @@ while getopts ":eiaskhyRtcCADXdor:E:n:l:" opt; do
 			;;
 		E)
 			ENVIRONMENT=${OPTARG}
+			;;
+		F)
+			DOMAINNAME=${OPTARG}
 			;;
 		n)
 			CIDR_PREFIX=${OPTARG}
@@ -203,6 +210,7 @@ git submodule add --force  https://github.com/digiwhite1980/terraform.git terraf
 FLAGS="-var env=${ENVIRONMENT}"
 [[ "${CIDR_PREFIX}" != "" ]] 		&& FLAGS="${FLAGS} -var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${AWS_REGION}" != "" ]] 		&& FLAGS="${FLAGS} -var aws_region=${AWS_REGION}"
+[[ "${DOMAINNAME}" != "" ]]		&& FLAGS="${FLAGS} -var domainname=${DOMAINNAME}"
 
 [[ ! -d ${TERRAFORM_STATE} ]]	&& mkdir ${TERRAFORM_STATE}
 [[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}

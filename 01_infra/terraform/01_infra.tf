@@ -419,6 +419,9 @@ module "instance_bastion" {
   user_data_base64            = ""
 }
 
-output "instance_bastion_dns" {
-  value = "${module.instance_bastion.public_dns}"
-}
+########################################################################
+# Only enable this if bastion != spot instance
+########################################################################
+# output "instance_bastion_dns" {
+#   value = "${module.instance_bastion.public_dns}"
+# }
