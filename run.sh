@@ -65,7 +65,7 @@ cat <<_EOF_
 
   $1
 
-  Usage: ${0} -E <environment> [-F domain] [-n <CIDR prefix x.x>] <Options *> 
+  Usage: ${0} -E <environment> [-F domain] [-n <CIDR prefix x.x>] [-t tag] <Options *> 
               [-r AWS Region] [-y] [-R] [-h Help] [-i Infra] [-e ETCD] [-a API] [-k Kubelet] [-s Services] [-c Custom] [-A All] [-D Destroy] [-d Destroy custom services] [-X] [-C] [-x {2..6}]
 
   Help:
@@ -74,6 +74,7 @@ cat <<_EOF_
   General:
   -E   * Environment 
   -F   Domain (default: example.internal)
+  -t   Project tag / name (defaults to demo)
   -r   {Region | AWS)
   -n   CIDR prefix [x.x] <first 2 digits of ipv4 network> (defaults to 10.0 in variables.tf file)
   -y   auto-approve terraform
@@ -106,7 +107,7 @@ _EOF_
 }
 
 
-while getopts ":eiaskfhyRtcCADXdox:r:E:n:l:F:" opt; do
+while getopts ":eiaskfhyRtcCADXdot:x:r:E:n:l:F:" opt; do
 	case $opt in
 		h)
 			usage
@@ -142,6 +143,9 @@ while getopts ":eiaskfhyRtcCADXdox:r:E:n:l:F:" opt; do
 		C)
 			CREATE_CUSTOM=1
 			EXEC=1
+			;;
+		t)
+			TAG=${OPTARG}
 			;;
 		D)
 			DESTROY=1
@@ -239,6 +243,7 @@ FLAGS="-var env=${ENVIRONMENT}"
 [[ "${CIDR_PREFIX}" != "" ]] 		&& FLAGS="${FLAGS} -var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${AWS_REGION}" != "" ]] 		&& FLAGS="${FLAGS} -var aws_region=${AWS_REGION}"
 [[ "${DOMAINNAME}" != "" ]]		&& FLAGS="${FLAGS} -var domainname=${DOMAINNAME}"
+[[ "${TAG}" != ]]						&& FLAGS="${FLAGS} -var project.main=${TAG}"
 
 [[ ! -d ${TERRAFORM_STATE} ]]	&& mkdir ${TERRAFORM_STATE}
 [[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
