@@ -243,7 +243,7 @@ FLAGS="-var env=${ENVIRONMENT}"
 [[ "${CIDR_PREFIX}" != "" ]] 		&& FLAGS="${FLAGS} -var cidr_vpc_prefix=${CIDR_PREFIX}"
 [[ "${AWS_REGION}" != "" ]] 		&& FLAGS="${FLAGS} -var aws_region=${AWS_REGION}"
 [[ "${DOMAINNAME}" != "" ]]		&& FLAGS="${FLAGS} -var domainname=${DOMAINNAME}"
-[[ "${TAG}" != ]]						&& FLAGS="${FLAGS} -var project.main=${TAG}"
+[[ "${TAG}" != "" ]]					&& FLAGS="${FLAGS} -var project.main=${TAG}"
 
 [[ ! -d ${TERRAFORM_STATE} ]]	&& mkdir ${TERRAFORM_STATE}
 [[ ! -d ${CONFIG_DIR} ]] 		&& mkdir ${CONFIG_DIR}
