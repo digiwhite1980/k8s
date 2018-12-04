@@ -41,7 +41,7 @@ module "site" {
   region          = "${data.aws_region.site_region.name}"
   vpc_cidr        = "${local.cidr_vpc["region"]}"
 
-  project         = "${var.project}"
+  project         = "${var.project["main"]}"
   environment     = "${var.env}"
   domain_name     = "${var.domainname}"
 
