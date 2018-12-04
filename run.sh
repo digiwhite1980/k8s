@@ -267,8 +267,8 @@ if [ ${CREATE_CUSTOM} -eq 1 ]; then
 	log 1 "Creating custom ${CUSTOM_FOLDER} environment"
 	for FOLDER in $(ls -1d 0* | grep -v ${CUSTOM_FOLDER})
 	do
-		[[ ! -L ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf && -f ../../${FOLDER}/terraform/${FOLDER}.tf ]] && ln -s ../../${FOLDER}/terraform/${FOLDER}.tf ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf
-		[[ ! -L ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf.disabled && -f ../../${FOLDER}/terraform/${FOLDER}.tf.disabled ]] && ln -s ../../${FOLDER}/terraform/${FOLDER}.tf.disabled ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf.disabled
+		[[ ! -L ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf && -f ${FOLDER}/terraform/${FOLDER}.tf ]] && ln -s ${FOLDER}/terraform/${FOLDER}.tf ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf
+		[[ ! -L ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf.disabled && -f ${FOLDER}/terraform/${FOLDER}.tf.disabled ]] && ln -s ${FOLDER}/terraform/${FOLDER}.tf.disabled ${CUSTOM_FOLDER}/terraform/${FOLDER}.tf.disabled
 	done
 
 	[[ ! -L ${CUSTOM_FOLDER}/terraform/aws_credentials.tf ]] && ln -s ../../shared/aws_credentials.tf ${CUSTOM_FOLDER}/terraform/aws_credentials.tf
