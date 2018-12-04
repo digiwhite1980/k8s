@@ -83,7 +83,8 @@ output "subnet_private" {
 module "route53_zone" {
   source              = "../../terraform_modules/route53_zone_private"
 
-  vpc_id              = [ "${module.site.aws_vpc_id}" ]
+  vpc_id              = "${module.site.aws_vpc_id}"
+  vpc_region          = "${data.aws_region.site_region.name}"
 
   project             = "${module.site.project}"
   environment         = "${module.site.environment}"
