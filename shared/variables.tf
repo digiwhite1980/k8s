@@ -5,6 +5,10 @@ variable "env" {
   default            = ""
 }
 
+variable "tag" {
+  default            = "demo"
+}
+
 variable "cidr_vpc_prefix" {
   default            = "10.0"
 }
@@ -74,7 +78,6 @@ variable "ssh" {
 
 variable "project" {
   default = {
-    main             = "demo"
     etcd             = "etcd"
     kubeapi          = "kubeapi"
     kubelet          = "kubelet"
