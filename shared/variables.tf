@@ -74,7 +74,7 @@ variable "ssh" {
 
 variable "project" {
   default = {
-    main             = "k8s"
+    main             = "demo"
     etcd             = "etcd"
     kubeapi          = "kubeapi"
     kubelet          = "kubelet"

@@ -41,7 +41,7 @@ module "site" {
   region          = "${data.aws_region.site_region.name}"
   vpc_cidr        = "${local.cidr_vpc["region"]}"
 
-  project         = "${var.project["main"]}"
+  project         = "${var.project}"
   environment     = "${var.env}"
   domain_name     = "${var.domainname}"
 
@@ -83,7 +83,7 @@ output "subnet_private" {
 module "route53_zone" {
   source              = "../../terraform_modules/route53_zone_private"
 
-  vpc_id              = "${module.site.aws_vpc_id}"
+  vpc_id              = [ "${module.site.aws_vpc_id}" ]
 
   project             = "${module.site.project}"
   environment         = "${module.site.environment}"
