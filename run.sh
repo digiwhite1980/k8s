@@ -440,8 +440,8 @@ if [ ${DESTROY} -eq 1 ]; then
 
 	terraform destroy ${FLAGS}
 	cd -
-	rm -fr terraform_modules 2> /dev/null
-	rm -fr config/* 2> /dev/null
+	#rm -fr terraform_modules 2> /dev/null
+	#rm -fr config/* 2> /dev/null
 fi
 
 if [ ${OUTPUT} -eq 1 ]; then
