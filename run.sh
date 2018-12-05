@@ -427,7 +427,7 @@ if [ ${DESTROY} -eq 1 ]; then
 			kubectl --kubeconfig config/kubeconfig delete -f ${FILE} > /dev/null 2>&1
 		done
 		log 1 "Sleeping 20 seconds for services to delete AWS created infrastucture"
-		rm -fr deploy/k8s/*.yaml 2> /dev/null
+		rm -fr deploy/*.yaml 2> /dev/null
 		sleep 20
 	fi
 
