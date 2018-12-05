@@ -1,3 +1,158 @@
+# ##################################################################################
+
+module "sg_ingress_internal" {
+  source            = "../../terraform_modules/sg_ingress_map"
+
+  sg_name           = "${module.site.project}-${module.site.environment}-ingress-internal"
+  aws_vpc_id        = "${module.site.aws_vpc_id}"
+
+  ingress           = [
+    {
+      from_port     = 0
+      to_port       = 0
+      protocol      = "-1"
+      cidr_blocks   = [ "${local.cidr_vpc["region"]}" ]      
+    }
+  ]
+}
+
+# ##################################################################################
+
+module "sg_ingress_management" {
+  source            = "../../terraform_modules/sg_ingress_map"
+
+  sg_name           = "${module.site.project}-${module.site.environment}-ingress-management"
+  aws_vpc_id        = "${module.site.aws_vpc_id}"
+
+  ingress = [
+    {
+      from_port     = "${var.ports["ssh"]}"
+      to_port       = "${var.ports["ssh"]}"
+      protocol      = "tcp"
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
+    },
+    {
+      from_port     = "${var.ports["https"]}"
+      to_port       = "${var.ports["https"]}"
+      protocol      = "tcp"
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
+    }
+  ]
+}
+
+module "sg_egress" {
+  source            = "../../terraform_modules/sg_egress_map"
+
+  sg_name           = "${module.site.project}-${module.site.environment}-egress"
+  aws_vpc_id        = "${module.site.aws_vpc_id}"
+
+  egress            = [
+    {
+      cidr_blocks   = [ "${local.cidr_vpc["all"]}" ]
+      from_port     = 0
+      to_port       = 0
+      protocol      = "-1"
+      self          = true          
+    }
+  ]
+}
+
+module "sg_gress_kubernetes" {
+  source                  = "../../terraform_modules/sg_gress_new"
+
+  sg_name                 = "Kubernetes SG"
+  aws_vpc_id              = "${module.site.aws_vpc_id}"
+  environment             = "${module.site.environment}"
+
+  ingress = [
+    {
+      from_port       = 0
+      to_port         = 0
+      protocol        = "-1"
+      cidr_blocks     = [ "${local.cidr_vpc["region"]}" ]
+      self            = true
+    },
+    {
+      from_port       = "${var.ports["ssh"]}"
+      to_port         = "${var.ports["ssh"]}"
+      protocol        = "tcp"
+      cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
+    }
+  ]
+
+  egress = [
+    {
+      from_port       = 0
+      to_port         = 0
+      protocol        = "-1"
+      cidr_blocks     = [ "${local.cidr_vpc["all"]}" ]
+      self            = true      
+    }
+  ]
+
+  tags {
+    KubernetesCluster     = "${var.kubernetes["name"]}-${module.site.environment}"
+    KubernetesVersion     = "${var.kubernetes["k8s"]}"
+  }
+}
+
+################################################################################
+
+module "ssl_ca_key" {
+  source              = "../../terraform_modules/ssl_private_key"
+  rsa_bits            = 4096
+}
+
+module "ssl_ca_crt" {
+  source                = "../../terraform_modules/ssl_self_signed_cert"
+
+  private_key_pem       = "${module.ssl_ca_key.private_key_pem}"
+  common_name           = "*"
+  organization          = "${module.site.project}-${module.site.environment}"
+
+  validity_period_hours = "${var.kubernetes["ca_ssl_valid"]}"
+  is_ca_certificate     = true
+
+  allowed_uses = [
+    "key_encipherment",
+    "cert_signing",
+    "server_auth",
+    "client_auth",
+  ]
+}
+
+resource "null_resource" "ssl_ca_key" {
+  triggers {
+    ssl_ca_crt              = "${module.ssl_ca_key.private_key_pem}"
+  }
+  provisioner "local-exec" { command = "cat > ../../config/ca.key <<EOL\n${module.ssl_ca_key.private_key_pem}\nEOL\n" }
+}
+
+resource "null_resource" "ssl_ca_crt" {
+  triggers {
+    ssl_ca_crt              = "${module.ssl_ca_crt.cert_pem}"
+  }
+  provisioner "local-exec" { command = "cat > ../../config/ca.crt <<EOL\n${module.ssl_ca_crt.cert_pem}\nEOL\n" }
+}
+
+################################################################################
+
+data "aws_ami" "ubuntu_ami" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
 ################################################################################
 
 module "ssl_etcd_key" {
