@@ -47,6 +47,11 @@ module "site" {
 
   ssh_pri_key     = "${var.ssh["ssh_priv"]}"
   ssh_pub_key     = "${var.ssh["ssh_pub"]}"
+
+  tags {
+    Name          = "${var.tag}"
+    Environment   = "${var.env}"
+  }
 }
 
 module "key_pair" {
