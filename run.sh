@@ -425,9 +425,9 @@ if [ ${DESTROY} -eq 1 ]; then
 		do
 			log 1 "Deleting yaml ${FILE}"
 			kubectl --kubeconfig config/kubeconfig delete -f ${FILE} > /dev/null 2>&1
+			rm ${FILE}
 		done
 		log 1 "Sleeping 20 seconds for services to delete AWS created infrastucture"
-		rm -fr deploy/*.yaml 2> /dev/null
 		sleep 20
 	fi
 
