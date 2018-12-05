@@ -92,7 +92,7 @@ resource "null_resource" "ssl_docker_registry_crt" {
 # ####################################################################
 
 data "template_file" "k8s_namespaces" {
-  template             = "${file("templates/00_namespaces.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/00_namespaces.tpl")}"
 
   vars {
     environment        = "${module.site.environment}"
@@ -116,7 +116,7 @@ data "template_file" "k8s_secrets" {
 }
 
 data "template_file" "k8s_storageclass" {
-  template             = "${file("templates/00_storageclass.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/00_storageclass.tpl")}"
 
   vars {
     hdd_class          = "${var.kubernetes["storage_hdd"]}"
@@ -125,7 +125,7 @@ data "template_file" "k8s_storageclass" {
 }
 
 data "template_file" "k8s_kubedns" {
-  template             = "${file("templates/01_kubeDNS.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/01_kubeDNS.tpl")}"
 
   vars {
     cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
@@ -137,7 +137,7 @@ data "template_file" "k8s_kubedns" {
 }
 
 data "template_file" "k8s_coredns" {
-  template             = "${file("templates/01_coreDNS.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/01_coreDNS.tpl")}"
 
   vars {
     cluster_ip_dns        = "${lookup(local.kubernetes_private, "dns.0")}"
@@ -149,7 +149,7 @@ data "template_file" "k8s_coredns" {
 }
 
 data "template_file" "k8s_busybox" {
-  template                = "${file("templates/01_busybox.tpl")}"
+  template                = "${file("../../05_services/terraform/templates/01_busybox.tpl")}"
 
   vars {
     namespace             = "${module.site.environment}"
@@ -157,11 +157,11 @@ data "template_file" "k8s_busybox" {
 }
 
 data "template_file" "k8s_alpine" {
-  template             = "${file("templates/01_alpine.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/01_alpine.tpl")}"
 }
 
 data "template_file" "k8s_dashboard" {
-  template             = "${file("templates/02_dashboard.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/02_dashboard.tpl")}"
 
   vars {
     namespace          = "${var.kubernetes["namespace_sys"]}"
@@ -170,7 +170,7 @@ data "template_file" "k8s_dashboard" {
 }
 
 data "template_file" "k8s_heapster" {
-  template             = "${file("templates/03_heapster.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/03_heapster.tpl")}"
 
   vars {
     namespace          = "${var.kubernetes["namespace_sys"]}"
@@ -179,11 +179,11 @@ data "template_file" "k8s_heapster" {
 }
 
 data "template_file" "k8s_influxdb" {
-  template             = "${file("templates/03_influxdb.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/03_influxdb.tpl")}"
 }
 
 data "template_file" "k8s_state-metrics" {
-  template             = "${file("templates/05_kube-state-metrics.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/05_kube-state-metrics.tpl")}"
 
   vars {
     statemetrics_version = "${var.kubernetes["state-metrics"]}"
@@ -192,7 +192,7 @@ data "template_file" "k8s_state-metrics" {
 }
 
 data "template_file" "k8s_ingress" {
-  template             = "${file("templates/06_ingress_backend.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/06_ingress_backend.tpl")}"
 
   vars {
     namespace          = "${module.site.environment}"
@@ -200,7 +200,7 @@ data "template_file" "k8s_ingress" {
 }
 
 data "template_file" "k8s_ingress_demo" {
-  template             = "${file("templates/06_ingress_demo.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/06_ingress_demo.tpl")}"
 
   vars {
     domainname         = "${module.site.domain_name}"
@@ -226,7 +226,7 @@ output "s3_docker_registry_arn" {
 }
 
 data "template_file" "k8s_docker-registry" {
-  template             = "${file("templates/10_docker-registry.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/10_docker-registry.tpl")}"
 
   vars {
     namespace             = "${module.site.environment}"
