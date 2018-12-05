@@ -76,7 +76,12 @@ module "subnet_private" {
   
   availability_zone = [ "${data.aws_availability_zones.site_avz.names}" ]
 
-  map_public_ip     = true                         
+  map_public_ip     = true 
+
+  tags {
+    Name            = "${module.site.project}"
+    Environment     = "${module.site.environment}"
+  }                        
 }
 
 output "subnet_private" {
