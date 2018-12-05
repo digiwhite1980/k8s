@@ -100,7 +100,7 @@ data "template_file" "k8s_namespaces" {
 }
 
 data "template_file" "k8s_secrets" {
-  template             = "${file("templates/00_secrets.tpl")}"
+  template             = "${file("../../05_services/terraform/templates/00_secrets.tpl")}"
 
   vars {
     namespace          = "${module.site.environment}"
