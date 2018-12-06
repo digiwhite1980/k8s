@@ -31,7 +31,7 @@ function binCheck {
 function toggleEnv {
 	if [ -f ${1}/terraform/${1}.tf.disabled ]; then
 		log 1 "Enable run environment ${1}"
-		find 0* -name ${1}.tf.disabled --exec mv {}.tf.disable {}.tf
+		find 0* -name ${1}.tf.disabled -exec mv {}.tf.disable {}.tf
 	else
 		log 1 "Disable run environment ${1}"
 		find 0* -name ${1}.tf --exec mv {}.tf {}.tf.disabled
