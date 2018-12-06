@@ -34,13 +34,13 @@ function toggleEnv {
 		find 0* -name ${1}.tf.disabled | while IFS= read file_name
 		do
 			TO=$(echo ${file_name} | sed 's/\.disabled//g')
-			echo "mv ${file_name} ${TO}"
+			mv ${file_name} ${TO}
 		done
 	else
 		log 1 "Disable run environment ${1}"
 		find 0* -name ${1}.tf | while IFS= read file_name
 		do
-			echo "mv ${file_name} ${file_name}.disabled"
+			mv ${file_name} ${file_name}.disabled
 		done
 	fi
 }
