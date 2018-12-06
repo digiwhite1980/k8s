@@ -31,10 +31,17 @@ function binCheck {
 function toggleEnv {
 	if [ -f ${1}/terraform/${1}.tf.disabled ]; then
 		log 1 "Enable run environment ${1}"
-		find 0* -name ${1}.tf.disabled -exec mv ${1}.tf.disable ${1}.tf \;
+		find 0* -name ${1}.tf.disabled | while IFS= read file_name
+		do
+			TO=$(echo ${file_name} | sed 's/\.disabled//g')
+			echo "mv ${file_name} ${TO}"
+		done
 	else
 		log 1 "Disable run environment ${1}"
-		find 0* -name ${1}.tf -exec mv ${1}.tf ${1}.tf.disabled \;
+		find 0* -name ${1}.tf  while IFS= read file_name
+		do
+			echo "mv ${file_name} ${file_name}.disabled"
+		done
 	fi
 }
 
