@@ -38,7 +38,7 @@ function toggleEnv {
 		done
 	else
 		log 1 "Disable run environment ${1}"
-		find 0* -name ${1}.tf  while IFS= read file_name
+		find 0* -name ${1}.tf | while IFS= read file_name
 		do
 			echo "mv ${file_name} ${file_name}.disabled"
 		done
