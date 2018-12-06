@@ -34,7 +34,7 @@ function toggleEnv {
 		find 0* -name ${1}.tf.disabled -exec mv {}.tf.disable {}.tf
 	else
 		log 1 "Disable run environment ${1}"
-		find 0* -name ${1}.tf --exec mv {}.tf {}.tf.disabled
+		find 0* -name ${1}.tf -exec mv {}.tf {}.tf.disabled
 	fi
 }
 
