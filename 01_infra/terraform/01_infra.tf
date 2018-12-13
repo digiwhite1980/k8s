@@ -79,8 +79,9 @@ module "subnet_private" {
   map_public_ip     = true 
 
   tags {
-    Name            = "${module.site.project}"
-    Environment     = "${module.site.environment}"
+    Name            											= "${module.site.project}"
+    Environment     											= "${module.site.environment}"
+	 "kubernetes.io/cluster/${module.site.project}" = "shared"
   }                        
 }
 
