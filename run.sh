@@ -423,12 +423,15 @@ if [ ${DESTROY} -eq 1 ]; then
 	if [ ${SKIP_SERVICES} -ne 1 ]; then
 		for FILE in $(ls -1 deploy/*.yaml)
 		do
+			FILE_DOUND=1
 			log 1 "Deleting yaml ${FILE}"
 			kubectl --kubeconfig config/kubeconfig delete -f ${FILE} > /dev/null 2>&1
 			rm ${FILE}
 		done
-		log 1 "Sleeping 20 seconds for services to delete AWS created infrastucture"
-		sleep 20
+		if [ "${FILE_FOUND}" == "1" ]; then
+			log 1 "Sleeping 20 seconds for services to delete AWS created infrastucture"
+			sleep 20
+		fi
 	fi
 
 	if [ "${DESTROY_SERVICES_ONLY}" == "1" ]; then
