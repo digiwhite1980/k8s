@@ -421,7 +421,7 @@ if [ ${DESTROY} -eq 1 ]; then
 	log 1 "Deleting kubernetes yaml's with dependencies"
 
 	if [ ${SKIP_SERVICES} -ne 1 ]; then
-		for FILE in $(ls -1 deploy/*.yaml)
+		for FILE in $(ls -1 deploy/*.yaml 2> /dev/null)
 		do
 			FILE_DOUND=1
 			log 1 "Deleting yaml ${FILE}"
